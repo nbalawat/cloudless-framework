@@ -143,6 +143,71 @@ The bedrock-agentcore `build_a2a_app()` registers Starlette routes for both `/.w
 
 ---
 
+### F19. Agent Runtime invocations run inside an asyncio loop — wrapper needs nest_asyncio *[M1.5 GCP adapter]*
+
+**Observed:** the cloudless GCP wrapper's first `query()` call returned:
+> `FailedPrecondition: Cannot run the event loop while another loop is running`
+
+Vertex Agent Runtime invokes the user's `query()` method from inside its own gRPC handler's asyncio loop. A naïve `loop = asyncio.new_event_loop(); loop.run_until_complete(...)` inside `query()` fails because there's already a loop.
+
+**Fix:** the wrapper's `set_up()` calls `nest_asyncio.apply()` which allows nested event loops. `nest-asyncio>=1.6.0` is added to the remote requirements list.
+
+This is a GCP-specific concern; the AWS adapter doesn't hit it because AgentCore's HTTP entrypoint is itself async, so the user's async generator can be awaited directly.
+
+### F20. GCP wrapper must CAPTURE cloudless classes as attributes at construction *[M1.5 — extends F13a]*
+
+**Observed during M1.5 GCP deploy iteration:** even with `cloudpickle.register_pickle_by_value()` on every cloudless module, invocations failed with:
+> `ModuleNotFoundError: No module named 'cloudless'`
+
+Root cause: the wrapper had `import cloudless` *inside* `_ctx()`. That's a runtime import, not a pickle-time reference. `register_pickle_by_value` embeds the class **definition** in the pickle but does NOT make `import cloudless` succeed on the remote — that requires cloudless to be installed via PyPI / wheel.
+
+**Fix:** capture every cloudless class the wrapper uses as an attribute of `self` at `__init__` time:
+
+```python
+class _CloudlessGCPAgent:
+    def __init__(self, agent_class):
+        import cloudless
+        self.agent_class = agent_class
+        # CAPTURED — pickled by value with the wrapper
+        self._InMemoryContext = cloudless.InMemoryContext
+        ...
+```
+
+The captured class reference is pickled by value (because `cloudless.runtime.context` is registered), so the remote unpickles a fully-resolved class without needing to `import cloudless` ever.
+
+**Pattern for cloudless GCP adapter (and any future ones):**
+- All cloudless types used at runtime must be referenced via `self.*` attributes set at `__init__` time
+- Never `import cloudless` inside a method body
+- `register_pickle_by_value()` on cloudless modules captures the class definitions; capture-as-attribute carries the references forward
+
+### F21. M1.5 cross-cloud deploy ACHIEVED — same codebase to AWS AgentCore + GCP Gemini Enterprise *[M1.5 milestone]*
+
+**The same `@cloudless.agent` Python class now deploys to BOTH clouds via cloudless code (not Phase 0 spike scaffolding).**
+
+Real-cloud integration tests both PASS:
+
+| Cloud | Test | Time | Cost |
+|---|---|---|---|
+| AWS AgentCore | `test_deploy_real_agentcore.py` | 98 s | ~$0.02 |
+| GCP Gemini Enterprise | `test_gcp_deploy_real.py` | 214 s | ~$0.02 |
+
+Each test:
+1. Scaffolds a project with `cloudless init`
+2. Loads the `@cloudless.agent` decorated class
+3. Calls `cloudless.adapters.<cloud>.deploy(agent_class, ...)`
+4. Invokes the deployed agent via the cloud's data-plane API
+5. Asserts "pong" appears in the response
+6. Cleans up the deployed resources
+
+The GCP adapter implementation differs from AWS in three key ways (per F13a, F19, F20):
+1. Picklable Python class instead of a container (Q4)
+2. `nest_asyncio.apply()` for nested-loop support (F19)
+3. cloudless classes captured as `self.*` attributes at `__init__` (F20)
+
+**Cumulative M1.5 cost:** ~$0.04 added to the running session total (~$0.17 of $50).
+
+---
+
 ### F16. AgentCore container base image must be Python 3.12, not 3.13 *[M1 deploy adapter]*
 
 **Observed during the first end-to-end `cloudless deploy` integration test.**

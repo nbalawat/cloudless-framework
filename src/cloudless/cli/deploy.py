@@ -64,7 +64,7 @@ def run(
     build_dir: Optional[Path] = None,
     project_root: Optional[Path] = None,
 ) -> int:
-    """`cloudless deploy <agent>` entrypoint."""
+    """`cloudless deploy <agent>` entrypoint — dispatches by cloud (Q4)."""
     project_root = (project_root or Path.cwd()).resolve()
     cfg = _load_yaml(project_root / "cloudless.yaml")
 
@@ -76,8 +76,8 @@ def run(
         )
         return 1
 
-    # Per-agent region override
-    region = agents_cfg[agent_name].get("region", region)
+    agent_cfg = agents_cfg[agent_name]
+    cloud = agent_cfg.get("cloud", cfg.get("default_cloud", "aws"))
 
     # Load the agent class from src/agents/*.py
     src_agents = project_root / "src" / "agents"
@@ -88,18 +88,28 @@ def run(
         _console.print(f"[red]✗[/] {e}")
         return 1
 
-    _console.print(f"[bold]Deploying[/] {agent_class.__module__}.{agent_class.__name__}")
-    _console.print(f"  region: {region}")
-    _console.print(f"  build_dir: {build_dir or '.cloudless/build/' + agent_name.replace('-', '_')}")
+    _console.print(f"[bold]Deploying[/] {agent_class.__module__}.{agent_class.__name__}  "
+                   f"→ [cyan]{cloud}[/]")
 
+    if cloud == "aws":
+        return _deploy_aws(agent_class, agent_cfg, region, build_dir, src_agents, cfg)
+    elif cloud == "gcp":
+        return _deploy_gcp(agent_class, agent_cfg, cfg)
+    else:
+        _console.print(f"[red]✗[/] Unknown cloud {cloud!r}; expected 'aws' or 'gcp'.")
+        return 1
+
+
+def _deploy_aws(
+    agent_class, agent_cfg: dict, region: str,
+    build_dir: Optional[Path], src_agents: Path, cfg: dict,
+) -> int:
+    region = agent_cfg.get("region", region)
     deployer = AgentCoreDeployer(region=region)
 
-    # Read the user's agent source file and pass it as user_agent.py to the build
     agent_module_path = src_agents / f"{agent_class.__module__.split('.')[-1]}.py"
-    if agent_module_path.is_file():
-        extra_files = {"user_agent.py": agent_module_path.read_text()}
-    else:
-        extra_files = None
+    extra_files = ({"user_agent.py": agent_module_path.read_text()}
+                   if agent_module_path.is_file() else None)
 
     try:
         result = deployer.deploy(
@@ -111,11 +121,40 @@ def run(
         _console.print(f"[red]✗ deploy failed:[/] {e}")
         return 2
 
-    _console.print()
-    _console.print("[green]✓ deployed[/]")
+    _console.print("[green]✓ deployed[/]  (AWS / AgentCore)")
     _console.print(f"  runtime ARN:   {result.runtime_arn}")
     _console.print(f"  endpoint ARN:  {result.endpoint_arn}")
     _console.print(f"  ECR URI:       {result.ecr_uri}")
     _console.print(f"  protocol:      {result.protocol}")
-    _console.print(f"  build dir:     {result.build_dir}")
+    return 0
+
+
+def _deploy_gcp(agent_class, agent_cfg: dict, cfg: dict) -> int:
+    from cloudless.adapters.gcp import AgentRuntimeDeployer
+
+    # Project + region from cloudless.yaml clouds.gcp.projects.<env>
+    gcp_cfg = (cfg.get("clouds") or {}).get("gcp") or {}
+    projects = gcp_cfg.get("projects") or {}
+    # Default to the 'dev' project if defined
+    if "dev" in projects:
+        project = projects["dev"].get("project") or projects["dev"].get("name")
+        location = projects["dev"].get("region", "us-central1")
+    else:
+        _console.print("[red]✗[/] cloudless.yaml clouds.gcp.projects.dev not configured.")
+        return 1
+
+    project = agent_cfg.get("project", project)
+    location = agent_cfg.get("region", location)
+
+    try:
+        result = AgentRuntimeDeployer(project=project, location=location).deploy(agent_class)
+    except Exception as e:  # noqa: BLE001
+        _console.print(f"[red]✗ deploy failed:[/] {e}")
+        return 2
+
+    _console.print("[green]✓ deployed[/]  (GCP / Gemini Enterprise Agent Runtime)")
+    _console.print(f"  resource:      {result.resource_name}")
+    _console.print(f"  project:       {result.project}")
+    _console.print(f"  region:        {result.region}")
+    _console.print(f"  staging bucket: {result.staging_bucket}")
     return 0
