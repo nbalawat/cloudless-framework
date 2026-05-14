@@ -38,6 +38,13 @@ from cloudless.exceptions import (
     TimeoutError,
     TransientError,
 )
+from cloudless.runtime import Context, InMemoryContext
+
+# Framework adapter bases — re-exported for ergonomic use:
+#   `class X(cloudless.LangGraphAgent)` rather than
+#   `from cloudless.adapters.frameworks.langgraph import LangGraphAgent`.
+# Each is None if the corresponding optional extra isn't installed.
+from cloudless.adapters.frameworks import LangGraphAgent, StrandsAgent
 
 __all__ = [
     "__version__",
@@ -54,6 +61,12 @@ __all__ = [
     "StateChunk",
     "FinalChunk",
     "ErrorChunk",
+    # Runtime
+    "Context",
+    "InMemoryContext",
+    # Framework adapters
+    "LangGraphAgent",
+    "StrandsAgent",
     # Exceptions (Q21)
     "CloudlessError",
     "TransientError",

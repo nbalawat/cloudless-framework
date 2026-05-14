@@ -28,7 +28,9 @@ dependencies = [
 # Framework adapters — see Q5 framework rollout
 langgraph = [
     "langgraph>=0.2,<2.0",
+    "langchain>=0.3,<2.0",
     "langchain-core>=0.3,<2.0",
+    "langchain-aws>=0.2,<2.0",
 ]
 strands = [
     "strands-agents>=1.39.0",
@@ -78,6 +80,10 @@ packages = ["src/cloudless"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "integration: requires real AWS or GCP credentials; not run by default in CI fast lane",
+]
+addopts = "-m 'not integration'"
 
 [tool.ruff]
 line-length = 100
