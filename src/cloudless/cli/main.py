@@ -24,6 +24,21 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
+    # dev
+    p_dev = sub.add_parser(
+        "dev",
+        help="Run an agent locally (Q13) with real LLM + in-memory ctx.",
+    )
+    p_dev.add_argument("agent_name", help="Agent name as declared in cloudless.yaml.")
+    p_dev.add_argument(
+        "--host", default="127.0.0.1",
+        help="Bind host (default: 127.0.0.1).",
+    )
+    p_dev.add_argument(
+        "--port", type=int, default=8080,
+        help="Bind port (default: 8080; matches AgentCore HTTP contract).",
+    )
+
     # deploy
     p_deploy = sub.add_parser(
         "deploy",
@@ -76,6 +91,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             framework=args.framework,
             cloud=args.cloud,
             force=args.force,
+        )
+
+    if args.command == "dev":
+        from cloudless.cli import dev as dev_cmd
+        return dev_cmd.run(
+            agent_name=args.agent_name,
+            host=args.host,
+            port=args.port,
         )
 
     if args.command == "deploy":
