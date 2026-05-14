@@ -143,6 +143,76 @@ The bedrock-agentcore `build_a2a_app()` registers Starlette routes for both `/.w
 
 ---
 
+### F16. AgentCore container base image must be Python 3.12, not 3.13 *[M1 deploy adapter]*
+
+**Observed during the first end-to-end `cloudless deploy` integration test.**
+
+The cloudless-generated Dockerfile initially used `python:3.13-slim`. The first CodeBuild run failed at 121s into BUILD phase with:
+
+> `error: subprocess-exited-with-error / Preparing metadata (pyproject.toml) did not run successfully ... numpy 1.26.4 ... ../meson.build:1:0: ERROR: Unknown compiler(s): [['cc'], ['gcc'], ['clang']]`
+
+Root cause: the langchain-aws extra (pulled in by the langgraph framework adapter) requires `numpy<2.0`. numpy 1.26 has **no pre-built wheel for linux/arm64 + Python 3.13** as of May 2026; pip falls back to source build via Meson, which fails because `python:3.13-slim` has no C compiler.
+
+**Fix:** switched the generated Dockerfile to `python:3.12-slim` and the agentcore configure `--runtime` flag to `PYTHON_3_12`. numpy 1.26 has wheels for arm64+py3.12.
+
+**Implication for cloudless:** the M1 default Dockerfile + AgentCore runtime version is Python 3.12. Move to 3.13 once numpy 2.x wheels are widely available for arm64.
+
+### F17. cloudless must be wheel-bundled into the deploy artifact pre-PyPI *[M1 deploy adapter]*
+
+**Observed during the second integration test run** (after F16 was fixed).
+
+The cloudless-generated `requirements.txt` listed `cloudless>=0.0.1`. The container build failed with `ResolutionImpossible` because cloudless isn't on PyPI yet at v0.x.
+
+**Fix:** the AgentCore deploy adapter now:
+1. Builds a wheel of cloudless from the local source tree using `pip wheel --no-deps`
+2. Bundles it into `wheelhouse/` in the build directory
+3. The Dockerfile installs it explicitly via `pip install ./wheelhouse/cloudless-*.whl` BEFORE running pip on `requirements.txt`
+4. `cloudless` is removed from `requirements.txt`
+
+**Implication for cloudless:** while we're pre-PyPI, every `cloudless deploy` requires cloudless installed as an editable package from a checkout with `pyproject.toml`. Once cloudless ships to PyPI in v1.0, this wheel-bundling step can be removed and `cloudless` returns to `requirements.txt`.
+
+### F18. M1 demo loop ACHIEVED — hello-world deploys to AgentCore in 98s *[M1 milestone]*
+
+**The capstone real-cloud integration test passes.**
+
+`tests/integration/test_deploy_real_agentcore.py` executes:
+1. `cloudless init deploy-demo --framework langgraph --cloud aws` — scaffold (instant)
+2. Load `HelloAgent` from the scaffolded `src/agents/hello.py`
+3. `cloudless.adapters.aws.deploy(HelloAgent)` — build wheel + artifact + CodeBuild + AgentCore deploy
+4. `boto3 invoke_agent_runtime` with `{"prompt": "Output exactly: pong"}`
+5. Cleanup
+
+Total elapsed: **98 seconds** (89s deploy + 9s invoke + cleanup). The deploy returned:
+```
+arn:aws:bedrock-agentcore:us-east-1:613112965612:runtime/hello-l9Wo8eFZFF
+```
+
+The invocation returned:
+```json
+{
+  "chunks": [
+    {"kind": "text", "text": "pong"},
+    {"kind": "final", "state": {"messages": [...]}}
+  ],
+  "final_text": "pong",
+  "agent": "hello"
+}
+```
+
+**ROADMAP M1 goal achieved**: "hello-world LangGraph agent deploys to AgentCore from local in <5 min" — done in 98 seconds.
+
+End-to-end stack proved in production:
+- `@cloudless.agent` decorator + `cloudless.LangGraphAgent` base
+- Scaffold from `cloudless init`
+- Bedrock Nova Micro (F1 inference profile + F15 streaming-safe)
+- Generated entrypoint bridging cloudless Chunks → AgentCore HTTP contract
+- ARM64 CodeBuild + ECR push + CreateAgentRuntime + endpoint provisioning
+- Public AgentCore data-plane invocation API
+
+**M1 cost for this run:** ~$0.05 across multiple deploy attempts (CodeBuild dominates). Running total ~$0.13 of $50.
+
+---
+
 ### F15. Anthropic Bedrock gates `converse_stream` separately from `converse` *[R12 root cause]*
 
 **Confirmed via local reproduction during R12 debugging.**

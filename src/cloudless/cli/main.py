@@ -24,6 +24,21 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
+    # deploy
+    p_deploy = sub.add_parser(
+        "deploy",
+        help="Deploy an agent to AgentCore (Q4 + Q6).",
+    )
+    p_deploy.add_argument("agent_name", help="Agent name as declared in cloudless.yaml.")
+    p_deploy.add_argument(
+        "--region", default="us-east-1",
+        help="AWS region for the deploy (default: us-east-1).",
+    )
+    p_deploy.add_argument(
+        "--build-dir", default=None,
+        help="Where to materialize the artifact (default: .cloudless/build/<name>).",
+    )
+
     # init
     p_init = sub.add_parser(
         "init",
@@ -61,6 +76,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             framework=args.framework,
             cloud=args.cloud,
             force=args.force,
+        )
+
+    if args.command == "deploy":
+        from cloudless.cli import deploy as deploy_cmd
+        return deploy_cmd.run(
+            agent_name=args.agent_name,
+            region=args.region,
+            build_dir=Path(args.build_dir) if args.build_dir else None,
         )
 
     parser.error(f"unknown command: {args.command}")
