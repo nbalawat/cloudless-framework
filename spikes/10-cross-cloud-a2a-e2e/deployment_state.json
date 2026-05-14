@@ -1,0 +1,7 @@
+{
+  "resource_name": "projects/305896968831/locations/us-central1/reasoningEngines/2092023731739164672",
+  "aws_peer_url": "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/arn%3Aaws%3Abedrock-agentcore%3Aus-east-1%3A613112965612%3Aruntime%2Fcloudless_spike_02-MSR6NF8xz5/invocations",
+  "staging_bucket": "gs://cloudless-spike-10-staging-613112965612",
+  "project": "agentic-experiments",
+  "location": "us-central1"
+}

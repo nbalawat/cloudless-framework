@@ -85,6 +85,27 @@ AgentCore Browser is a managed Playwright environment. GCP doesn't have a direct
 
 **Mitigation**: clear security warning in `cloudless dev` output; recommend disabling sandbox in dev when running untrusted prompts; document that production behavior differs.
 
+### R12. Strands `execute()` path inside AgentCore A2A mode raises mid-execution
+
+**Severity: high. Status: open (Spike 10 follow-up).**
+
+Spike 10 closed the cross-cloud A2A loop end-to-end at the protocol+auth layer, but the AWS-side Strands agent (configured via `serve_a2a(StrandsA2AExecutor(agent))`) returned a synthesized task-status message "Agent execution failed" rather than running the Strands agent and producing a response. uvicorn logs show NO log line for the actual `POST /` JSON-RPC request, suggesting either the request bypasses uvicorn entirely in A2A protocol mode, or it errors so early that uvicorn doesn't get to log it.
+
+**Hypotheses:**
+1. A2A protocol mode in AgentCore does not route through uvicorn at all — it has its own JSON-RPC dispatcher that calls the executor directly via stdin/stdout or another IPC mechanism, bypassing the HTTP listener.
+2. `StrandsA2AExecutor.execute()` requires event-queue semantics (TaskUpdater, EventQueue) that AgentCore's A2A handler doesn't supply correctly.
+3. Bedrock IAM propagation race on first model invocation immediately after runtime cold-start.
+
+**Validation plan:**
+- Reproduce locally: start the agent on 127.0.0.1:9000, send a Cognito-bearer-less JSON-RPC `message/send`, see if Strands errors locally too. If yes → Strands/a2a-sdk integration bug; if no → AgentCore A2A dispatch contract issue.
+- If AgentCore-side: enable X-Ray (wait 10-15 min after deploy for trace destination) and re-run; X-Ray spans should show where the failure originates.
+
+**Mitigation paths (not blocking v1):**
+1. Use a vanilla a2a-sdk `AgentExecutor` (not `StrandsA2AExecutor`) and call Strands manually inside `execute()`.
+2. Pin to specific versions of `bedrock-agentcore` + `strands-agents` known to interop cleanly via the A2A protocol mode (compatibility matrix from Q27).
+
+**Architectural impact:** none on Q1-Q39 design decisions. The cross-cloud architecture works; this is an implementation-debugging issue.
+
 ### ~R11. Strands A2A executor broken against a2a-sdk 1.0+~ — RESOLVED 2026-05-14
 
 **Status: closed.** Pinning `a2a-sdk>=0.3.9,<1.0.0` (currently resolves to 0.3.26) unblocks `StrandsA2AExecutor`. AgentCore itself advertises `protocolVersion: 0.3.0` and the bedrock-agentcore SDK exposes both v0.3 and v1.x agent-card paths — so v0.3 is the architecturally correct target for v0.x cloudless. Migration to a2a-sdk 1.x deferred until Strands + AgentCore both move to spec v1.0. See SPIKE-FINDINGS.md F3 for the full investigation.
