@@ -13,5 +13,15 @@ M1 ships LLM only (AWS-only); subsequent milestones add the rest:
 from __future__ import annotations
 
 from cloudless.catalog.llm import LLM, ModelAlias, resolve_model
+from cloudless.catalog.memory import (
+    InMemoryBackend,
+    Memory,
+    MemoryBackend,
+    MemoryEvent,
+    MemoryRecord,
+)
 
-__all__ = ["LLM", "ModelAlias", "resolve_model"]
+__all__ = [
+    "LLM", "ModelAlias", "resolve_model",
+    "Memory", "MemoryBackend", "MemoryEvent", "MemoryRecord", "InMemoryBackend",
+]
