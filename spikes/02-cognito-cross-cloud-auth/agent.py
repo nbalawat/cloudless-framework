@@ -20,7 +20,11 @@ agent = Agent(
         "Minimal Strands agent used by cloudless Spike 2 to validate "
         "AgentCore's A2A agent-card behavior. Replies with 'pong'."
     ),
-    model="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    # Nova Micro chosen over Claude Haiku 4.5 because Anthropic's Bedrock
+    # gating treats `converse_stream` as a separate use case requiring its
+    # own use-case form. Strands always uses streaming → must use a model
+    # whose streaming API is unblocked. See SPIKE-FINDINGS.md F15.
+    model="us.amazon.nova-micro-v1:0",
     system_prompt="Always reply with exactly the single word 'pong'.",
 )
 

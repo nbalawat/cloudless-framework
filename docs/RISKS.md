@@ -85,7 +85,11 @@ AgentCore Browser is a managed Playwright environment. GCP doesn't have a direct
 
 **Mitigation**: clear security warning in `cloudless dev` output; recommend disabling sandbox in dev when running untrusted prompts; document that production behavior differs.
 
-### R12. Strands `execute()` path inside AgentCore A2A mode raises mid-execution
+### ~R12. Strands `execute()` path inside AgentCore A2A mode raises mid-execution~ — RESOLVED 2026-05-14
+
+**Status: closed (root cause was F15, not Strands/A2A).** The actual exception was `ResourceNotFoundException` from Bedrock — Anthropic gates `converse_stream` separately from `converse`. Strands uses `converse_stream`; the Spike 2 agent's model (Claude Haiku 4.5) lacked streaming approval in this account. Swapping the model to `us.amazon.nova-micro-v1:0` (no Anthropic form requirement) made Spike 10 fully pass with "pong" returned end-to-end. See SPIKE-FINDINGS.md F15 for the new gating risk this surfaced.
+
+### R12-historical. Strands `execute()` path inside AgentCore A2A mode raises mid-execution
 
 **Severity: high. Status: open (Spike 10 follow-up).**
 

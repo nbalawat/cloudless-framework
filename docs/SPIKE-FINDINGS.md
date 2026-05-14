@@ -143,9 +143,62 @@ The bedrock-agentcore `build_a2a_app()` registers Starlette routes for both `/.w
 
 ---
 
-### F14. Spike 10 — Cross-cloud A2A E2E: architecture validates; Strands execute path needs follow-up *[Spike 10 — capstone]*
+### F15. Anthropic Bedrock gates `converse_stream` separately from `converse` *[R12 root cause]*
+
+**Confirmed via local reproduction during R12 debugging.**
+
+Same model, same IAM principal, two different APIs:
+
+| API | Claude Haiku 4.5 in this account |
+|---|---|
+| `bedrock-runtime:Converse` (sync) | ✅ Works (F1 result) |
+| `bedrock-runtime:ConverseStream` (streaming) | ❌ `ResourceNotFoundException: Model use case details have not been submitted for this account. Fill out the Anthropic use case details form before using the model.` |
+
+Anthropic's Bedrock gating treats streaming as a separate use case requiring its own form approval. Strands' Bedrock model adapter always uses `converse_stream` (because Strands streams by default). So ANY Anthropic model on Bedrock without explicit streaming approval will fail inside a Strands agent — even if it works fine when called directly.
+
+**Verified working alternative:** Amazon Nova models. `us.amazon.nova-micro-v1:0` returns 'pong' cleanly via `converse_stream` with no form gating.
+
+**Implications for cloudless:**
+
+1. **`cloudless doctor` must check `converse_stream` availability** (not just `converse`) for each LLM model referenced in `cloudless.yaml`. Probe by issuing a 1-token streaming call at deploy time; warn if the form is missing.
+2. **Model-alias resolution table (OQ4)** must record whether each model supports streaming. For example:
+   - `claude-haiku` → resolves to Claude Haiku 4.5 IFF user has the streaming use-case form approved; falls back to a default `nova-micro` otherwise (with a deploy-time warning).
+3. **Document this gating clearly** in cloudless docs — it's a Bedrock+Anthropic quirk that's not obvious from AWS console.
+
+**Cost:** $0 (local reproduction).
+
+---
+
+### F14. Spike 10 PASSED — Cross-cloud A2A E2E succeeded end-to-end with 'pong' *[Spike 10 — capstone, both halves]*
 
 **The capstone.** GCP-hosted Gemini Enterprise Agent Runtime calls AWS-hosted AgentCore A2A endpoint with Cognito JWT. End-to-end run completed; one half passes, the other half needs deeper diagnosis.
+
+**Final result after R12 fix (model swap to Nova Micro):**
+
+```json
+{
+  "from": "gcp-agent",
+  "via": "a2a + cognito jwt",
+  "aws_response": {
+    "status_code": 200,
+    "body": {
+      "jsonrpc": "2.0",
+      "id": "a681ccc9-...",
+      "result": {
+        "kind": "task",
+        "id": "9bcf1396-9f3b-42b2-bea7-2018a3f9ed1e",
+        "status": {"state": "completed", "timestamp": "..."},
+        "history": [
+          {"role": "user",  "parts": [{"kind":"text","text":"say pong"}]},
+          {"role": "agent", "parts": [{"kind":"text","text":"pong"}]}   ← ✅ End-to-end
+        ]
+      }
+    }
+  }
+}
+```
+
+The full cross-cloud loop: **GCP Gemini Enterprise Agent Runtime → Cognito M2M JWT → AWS AgentCore A2A → Strands → Bedrock Nova Micro → "pong" → GCP caller.**
 
 **What works (the architecture):**
 
@@ -215,7 +268,9 @@ The bedrock-agentcore `build_a2a_app()` registers Starlette routes for both `/.w
 
 **Running total: ~$0.07 of $50.** Plenty of room.
 
-**Spike 10 status: ✅ PASS for architecture; ⚠️ FOLLOW-UP for Strands execute path inside AgentCore A2A mode.**
+**R12 resolved (2026-05-14 same session):** the failure was not in Strands or A2A integration — it was `converse_stream` being separately gated by Anthropic (F15). Swapping the model from `us.anthropic.claude-haiku-4-5-…` to `us.amazon.nova-micro-v1:0` made the full loop close with the expected "pong" response.
+
+**Spike 10 status: ✅ FULL PASS. The cross-cloud architecture is empirically validated end-to-end.**
 
 ---
 
