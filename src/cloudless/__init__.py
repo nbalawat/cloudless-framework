@@ -39,6 +39,7 @@ from cloudless.exceptions import (
     TransientError,
 )
 from cloudless.runtime import Context, InMemoryContext
+from cloudless.catalog import LLM, ModelAlias, resolve_model
 
 # Framework adapter bases — re-exported for ergonomic use:
 #   `class X(cloudless.LangGraphAgent)` rather than
@@ -67,6 +68,10 @@ __all__ = [
     # Framework adapters
     "LangGraphAgent",
     "StrandsAgent",
+    # Service catalog (Q9)
+    "LLM",
+    "ModelAlias",
+    "resolve_model",
     # Exceptions (Q21)
     "CloudlessError",
     "TransientError",
