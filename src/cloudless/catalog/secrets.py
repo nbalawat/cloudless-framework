@@ -91,10 +91,11 @@ class Secrets:
         prefix: str = "",
         region: str = "us-east-1",
         path: Optional[Path] = None,
+        project: Optional[str] = None,
     ) -> None:
         if isinstance(backend, str):
             self._backend = self._build_backend(
-                backend, prefix=prefix, region=region, path=path,
+                backend, prefix=prefix, region=region, path=path, project=project,
             )
         else:
             self._backend = backend
@@ -103,12 +104,18 @@ class Secrets:
     @staticmethod
     def _build_backend(
         name: str, *, prefix: str, region: str, path: Optional[Path],
+        project: Optional[str] = None,
     ) -> SecretsBackend:
         if name == "local":
             return LocalFileBackend(path=path)
         if name == "aws":
             from cloudless.adapters.aws.secrets import SecretsManagerBackend
             return SecretsManagerBackend(prefix=prefix, region=region)
+        if name == "gcp":
+            if not project:
+                raise ValueError("backend='gcp' requires project")
+            from cloudless.adapters.gcp.secrets import SecretManagerBackend
+            return SecretManagerBackend(project=project, prefix=prefix)
         raise ValueError(f"Unknown secrets backend: {name!r}")
 
     async def get(self, name: str) -> Optional[str]:

@@ -20,10 +20,35 @@ from cloudless.catalog.memory import (
     MemoryEvent,
     MemoryRecord,
 )
+from cloudless.catalog.embeddings import (
+    DEFAULT_EMBEDDING_ALIASES,
+    Embeddings,
+    EmbeddingsBackend,
+    EmbeddingAlias,
+    resolve_embedding,
+)
+from cloudless.catalog.sandbox import (
+    LocalSubprocessBackend,
+    Sandbox,
+    SandboxBackend,
+    SandboxResult,
+)
 from cloudless.catalog.secrets import LocalFileBackend, Secrets, SecretsBackend
+from cloudless.catalog.tools import Tool, tool
+from cloudless.catalog.vector_store import (
+    InMemoryVectorBackend,
+    VectorMatch,
+    VectorStore,
+    VectorStoreBackend,
+)
 
 __all__ = [
     "LLM", "ModelAlias", "resolve_model",
     "Memory", "MemoryBackend", "MemoryEvent", "MemoryRecord", "InMemoryBackend",
     "Secrets", "SecretsBackend", "LocalFileBackend",
+    "Sandbox", "SandboxBackend", "SandboxResult", "LocalSubprocessBackend",
+    "Embeddings", "EmbeddingsBackend", "EmbeddingAlias", "resolve_embedding",
+    "DEFAULT_EMBEDDING_ALIASES",
+    "VectorStore", "VectorStoreBackend", "VectorMatch", "InMemoryVectorBackend",
+    "Tool", "tool",
 ]

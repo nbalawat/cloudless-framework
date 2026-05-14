@@ -21,6 +21,14 @@ from cloudless.runtime.context import (
     Session,
     User,
 )
+from cloudless.runtime.logging import (
+    add_redact_pattern,
+    bind_invocation,
+    clear_invocation,
+    configure,
+    get_logger,
+)
+from cloudless.runtime.manifest import Manifest, PeerEntry, load_manifest
 
 __all__ = [
     "Context",
@@ -29,4 +37,12 @@ __all__ = [
     "CostTracker",
     "PeerClient",
     "InMemoryContext",
+    "Manifest",
+    "PeerEntry",
+    "load_manifest",
+    "get_logger",
+    "configure",
+    "bind_invocation",
+    "clear_invocation",
+    "add_redact_pattern",
 ]

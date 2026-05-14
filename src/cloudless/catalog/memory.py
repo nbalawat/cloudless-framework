@@ -225,6 +225,8 @@ class Memory:
         memory_id: Optional[str] = None,
         region: str = "us-east-1",
         actor_id_template: str = "{scope}",
+        agent_engine_name: Optional[str] = None,
+        location: str = "us-central1",
     ) -> None:
         """
         Args:
@@ -239,6 +241,7 @@ class Memory:
             self._backend = self._build_backend(
                 backend, memory_id=memory_id, region=region,
                 actor_id_template=actor_id_template,
+                agent_engine_name=agent_engine_name, location=location,
             )
         else:
             self._backend = backend
@@ -247,6 +250,7 @@ class Memory:
     def _build_backend(
         name: str, *, memory_id: Optional[str], region: str,
         actor_id_template: str,
+        agent_engine_name: Optional[str] = None, location: str = "us-central1",
     ) -> MemoryBackend:
         if name == "in_memory":
             return InMemoryBackend()
@@ -256,11 +260,20 @@ class Memory:
                     "backend='agentcore' requires memory_id. "
                     "Create one via boto3 bedrock-agentcore-control CreateMemory."
                 )
-            # Lazy import so the in-memory path doesn't need boto3
             from cloudless.adapters.aws.memory import AgentCoreBackend
             return AgentCoreBackend(
                 memory_id=memory_id, region=region,
                 actor_id_template=actor_id_template,
+            )
+        if name == "memory_bank":
+            if not agent_engine_name:
+                raise ValueError(
+                    "backend='memory_bank' requires agent_engine_name "
+                    "(full reasoningEngines/.../<id> resource name)."
+                )
+            from cloudless.adapters.gcp.memory import MemoryBankBackend
+            return MemoryBankBackend(
+                agent_engine_name=agent_engine_name, location=location,
             )
         raise ValueError(f"Unknown memory backend: {name!r}")
 

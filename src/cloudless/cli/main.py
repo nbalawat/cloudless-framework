@@ -54,6 +54,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Where to materialize the artifact (default: .cloudless/build/<name>).",
     )
 
+    # eval
+    p_eval = sub.add_parser("eval", help="Run an eval dataset against an LLM (Q8).")
+    p_eval_sub = p_eval.add_subparsers(dest="eval_command", required=True)
+    p_eval_run = p_eval_sub.add_parser("run", help="Run an eval dataset.")
+    p_eval_run.add_argument("dataset_path", help="Path to JSONL dataset.")
+    p_eval_run.add_argument("--output", "-o", default=None,
+                             help="Where to write results JSONL.")
+    p_eval_run.add_argument("--model", default="nova-micro",
+                             help="LLM alias for the target (default: nova-micro).")
+    p_eval_run.add_argument("--region", default="us-east-1")
+
     # logs
     p_logs = sub.add_parser("logs", help="Stream a deployed agent's CloudWatch logs.")
     p_logs.add_argument("agent_name")
@@ -121,6 +132,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             host=args.host,
             port=args.port,
         )
+
+    if args.command == "eval":
+        if args.eval_command == "run":
+            from cloudless.cli import eval as eval_cmd
+            return eval_cmd.run(
+                dataset_path=args.dataset_path,
+                output_path=args.output,
+                model=args.model,
+                region=args.region,
+            )
 
     if args.command == "logs":
         from cloudless.cli import ops
