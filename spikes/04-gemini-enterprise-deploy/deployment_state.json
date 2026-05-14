@@ -1,0 +1,6 @@
+{
+  "resource_name": "projects/305896968831/locations/us-central1/reasoningEngines/2008707138632810496",
+  "staging_bucket": "gs://cloudless-spike-04-staging-613112965612",
+  "project": "agentic-experiments",
+  "location": "us-central1"
+}

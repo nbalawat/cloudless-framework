@@ -143,6 +143,81 @@ The bedrock-agentcore `build_a2a_app()` registers Starlette routes for both `/.w
 
 ---
 
+### F13. Spike 4 PASSED — Gemini Enterprise Agent Runtime deploy validates Q4 GCP side *[Spike 4 — full deploy + query + stream_query]*
+
+**Spike:** Spike 4 — author picklable `CloudlessSpike04Agent`, deploy via `client.agent_engines.create()`, exercise `query()` and `stream_query()` against the live engine.
+
+**Deployed engine:** `projects/305896968831/locations/us-central1/reasoningEngines/2008707138632810496`
+
+**Results:**
+
+| Test | Result |
+|---|---|
+| `agent_engines.create(...)` | **PASS** — deploy succeeds, engine starts and serves traffic |
+| `operation_schemas()` | **PASS** — auto-derives schema from `register_operations()` method |
+| `query(prompt="say pong")` | **PASS** — returns `{"text": "pong", "model": "gemini-2.5-flash"}` |
+| `stream_query(prompt="say pong")` | **PASS** — yields `{"text": "pong"}` (1 chunk) |
+
+**Critical architectural finding (F13a) — cloudpickle by-reference gotcha:**
+
+The first deploy attempt **failed** with `ModuleNotFoundError: No module named 'agent'` on engine startup. Root cause: cloudpickle defaults to pickling classes **by reference** (recording the source module path). When the remote runtime unpickles, it tries to `import agent` and fails — `agent.py` isn't a registered Python module on the remote.
+
+The `extra_packages=["./agent.py"]` argument by itself does NOT fix this — the file gets uploaded but isn't discoverable as a package.
+
+**The fix that works:**
+
+```python
+import cloudpickle
+import agent as agent_module
+cloudpickle.register_pickle_by_value(agent_module)
+```
+
+This tells cloudpickle to embed the full class definition into the pickled bytes, so the remote can deserialize without importing the original module. The remote runtime never needs to know about `agent.py`.
+
+**Implication for cloudless:**
+
+The GCP adapter (Q4) must **automatically call `cloudpickle.register_pickle_by_value()` on every module that contains a `@cloudless.agent` decorated class** before invoking `agent_engines.create()`. Probably implemented as:
+
+```python
+def deploy_to_gcp(agent_class):
+    import cloudpickle
+    module = sys.modules[agent_class.__module__]
+    cloudpickle.register_pickle_by_value(module)
+    instance = agent_class()
+    return agent_engines.create(agent_engine=instance, ...)
+```
+
+This is the single most important GCP-adapter implementation detail surfaced by spike work so far. Without it, every cloudless user's GCP deploy will fail mysteriously.
+
+**Other observations:**
+- Total deploy time: ~3 minutes (build + provision + startup).
+- Cloud Build runs on an Ubuntu base; produces a container that Gemini Enterprise Agent Runtime hosts.
+- `requirements` list got auto-augmented with `cloudpickle==3.1.2` and `pydantic==2.13.4` (matching the local versions).
+- Staging bucket is required; `staging_bucket=` must be supplied to `vertexai.init(...)`.
+- F4 was a false alarm: the SA had `storage.objects.create` at the bucket-level (just not project-wide), which is what's actually needed.
+
+**Spike 4 cost:** ~$0.02 (Cloud Build + Gemini Flash inferences).
+
+**Running total cost across spikes 1-4:** ~$0.04 of $50 budget.
+
+**Spike 4 status: ✅ PASS — Q4 GCP-side validated end-to-end; F13a captures the cloudpickle pattern that the GCP adapter must implement.**
+
+---
+
+### F12. Spike 3 PASSED — AgentCore deploy from macOS via CodeBuild works without local Docker *[Spike 3 — implicit in Spikes 1 + 2]*
+
+**Validated in passing during Spikes 1 & 2.** Both spikes built ARM64 containers via CodeBuild and deployed to AgentCore in 32-90 seconds, from a macOS Darwin 25.3.0 host with no Docker/Finch/Podman installed. The starter-toolkit `agentcore deploy` flow uploads a source zip to S3, triggers CodeBuild ARM64, pushes to ECR, and calls `CreateAgentRuntime` — all server-side.
+
+**Notes for cloudless docs:**
+- ARM64 builds happen in CodeBuild via the toolkit's built-in `buildspec.yml`. Total build wall-clock: ~30s for our minimal containers.
+- The toolkit DOES NOT auto-generate a `Dockerfile` — users must provide one. We provided one matching the AgentCore contract (ARM64, EXPOSE 9000 for A2A, python:3.13-slim base).
+- `--local-build` flag exists for users who DO have Docker locally and want to control the build. CodeBuild path is the safer default.
+- No special Apple Silicon handling needed: the CodeBuild path is platform-agnostic on the developer side.
+
+**Spike 3 status: ✅ PASS (covered by Spikes 1 + 2; no standalone deploy needed).**
+
+---
+
 ### F11. Spike 2 PASSED — Cognito M2M JWT works for cross-cloud A2A auth *[Spike 2 — full deploy + GCP-side simulation]*
 
 **Spike:** Spike 2 — Cognito User Pool + Resource Server + M2M App Client; AgentCore runtime with `customJWTAuthorizer` config; verified four code paths.
