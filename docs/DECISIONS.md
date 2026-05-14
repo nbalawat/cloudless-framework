@@ -1,6 +1,6 @@
 # cloudless — Architecture Decision Log
 
-> Concise ADR-style log of decisions Q1–Q37 from the design interview.
+> Concise ADR-style log of decisions Q1–Q39 from the design interview.
 > Full rationale in [`ARCHITECTURE.md`](./ARCHITECTURE.md). Research evidence in [`research/`](./research/).
 > Status: design-locked; implementation pending.
 
@@ -43,6 +43,8 @@
 | Q35 | Extensibility model | **Python entry points + `typing.Protocol` per extension point + first-party adapters in-tree.** 6 protocols: FrameworkAdapter / CloudAdapter / MemoryBackend / EvalJudge / HitlChannel / ToolSource. | 2026-05-14 |
 | Q36 | Starter templates | **6 canonical templates in-tree** (`hello` / `chat-memory` / `rag` / `multi-agent` / `research-task` / `ops-bot`) + community templates via `--template github:user/repo`. Weekly real-cloud CI on each template. | 2026-05-14 |
 | Q37 | Smaller open-question defaults | **Accepted 10 defaults** (Cognito Standard tier, OTel sampling, manifest TTL refresh, model-alias resolution table, custom-strategy size validation, GCP cold-start bench in M4, Slack approval app template, Grafana 11+ mixed sources, manifest signing deferred to v1.5, core-path CI per PR + full matrix nightly). | 2026-05-14 |
+| Q38 | CI/CD for cloudless itself | **Trunk-based + release-please + 4 release channels + Sigstore-signed.** Conventional Commits drive auto-versioning. Core-path tests on every PR (~9 min); full matrix nightly. Dedicated cloud test accounts with budget caps. | 2026-05-14 |
+| Q39 | Logging conventions | **Structured JSON via `structlog` + OTel correlation IDs (trace.id / span.id auto-injected) + auto-redact of secrets + per-component levels in `cloudless.yaml`.** Pretty colored output in TTY; JSONL in cloud sinks. Levels: TRACE/DEBUG/INFO/WARNING/ERROR/CRITICAL. | 2026-05-14 |
 
 ## How decisions interact
 
@@ -61,8 +63,6 @@ A handful of pairs are tightly coupled — changing one usually forces a re-look
 ## Decisions deliberately NOT made yet
 
 - **The real name** — deferred to v1.0 branding exercise (Q29).
-- **CI/CD pipeline for cloudless itself** (branch strategy, release channels, pre-release flow) — conventional choices; defer to M1.
-- **Logging conventions** (log levels, structured JSON, redaction defaults) — conventional choices; defer to M1.
 - **Documentation site domain** — depends on naming (Q29).
 - **Specific Bedrock vs Vertex LLM mapping table** (which Claude / Gemini variant maps to "claude-opus" alias) — Q37 OQ4 covers the *mechanism* (alias table maintained in cloudless); concrete values are implementation-time.
 - **OpenTelemetry semantic-convention version** — pin during M1.

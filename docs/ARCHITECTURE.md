@@ -1,6 +1,6 @@
 # cloudless — Architecture
 
-> Status: design-locked through 37 questions. Implementation pending. Working name `cloudless`.
+> Status: design-locked through 39 questions. Implementation pending. Working name `cloudless`.
 > Last updated: 2026-05-14.
 
 ## Table of contents
@@ -792,7 +792,114 @@ Each template ships: agent source, `cloudless.yaml`, tools/policies as relevant,
 
 **Template CI:** every template goes through `init → deploy → test → eval` in real cloud accounts weekly. Broken template = release blocker.
 
-### 9.8 Open-question defaults (Q37)
+### 9.8 CI/CD for the cloudless project itself (Q38)
+
+**Trunk-based + release-please + multiple release channels + Sigstore-signed everything.**
+
+**Branching:**
+- `main` is always shippable; no long-lived dev branch.
+- Feature branches off `main`; squash-merge with Conventional Commit messages.
+- `release/v1.x` maintenance branches for LTS patch backports (per Q27 LTS-on-even-MAJORs).
+
+**Release automation:**
+- **release-please** maintains an open release PR with auto-generated changelog and version bumps.
+- Conventional Commits drive versioning: `feat!:` → MAJOR; `feat:` → MINOR; `fix:`/`perf:` → PATCH.
+- Merging the release PR triggers PyPI publish via Trusted Publishers and `cosign sign`.
+
+**Release channels (PyPI):**
+- `cloudless` — stable (tagged releases only).
+- `cloudless==X.Y.ZaN` — alpha (may break).
+- `cloudless==X.Y.ZbN` — beta (feature-complete).
+- `cloudless==X.Y.ZrcN` — release candidate.
+- `cloudless-nightly` (separate package) — auto-built from `main` every 24h.
+
+**PR checks (every PR):**
+- Lint (ruff) + type-check (mypy/pyright).
+- Unit tests (mocked services).
+- **Core-path integration tests** (Q37 OQ10): each framework × each cloud × {LLM, Memory, A2A} = 18 cells, ~9 min.
+- Docs build succeeds.
+- Telemetry registry diff check (new fields require explicit doc PR).
+- `pip-licenses` + `pip-audit`.
+- `cosign verify` round-trip on candidate build.
+
+**Nightly checks:**
+- Full integration matrix (66 cells). Failures file GitHub issues.
+- Continuous benchmark (Q34) against real AWS + GCP test accounts.
+- Template smoke (Q36): each of 6 templates `init → deploy → test → eval`.
+- Cross-cloud A2A E2E loop test.
+
+**Pre-release checks** before any stable release:
+- All nightly checks + manual maintainer approval.
+- Threat-model spot checks (Q33).
+- Sigstore signature verification.
+- SBOM published as release asset.
+- Compatibility matrix (Q27) refreshed.
+
+**Cloud test accounts:**
+- Dedicated AWS + GCP accounts isolated from dev/prod.
+- Budget caps with auto-pause alarms.
+- `cloudless-test:*` resource naming for cleanup.
+- Post-CI cleanup; nightly GC for orphans.
+
+**Conventions:**
+- ≥1 maintainer review on every PR.
+- Squash-merge only; PR title becomes commit message.
+- CLA (Q32) not DCO.
+- `docs/` changes use `chore(docs):` prefix; don't bump release-please version.
+
+### 9.9 Logging conventions (Q39)
+
+**Structured JSON via `structlog` + OTel context propagation + auto-redact + per-component levels.**
+
+**Output:**
+- Cloud/production: JSON Lines, one log per line.
+- Local/CLI: pretty-printed with colors via `rich`; same content, different rendering.
+- `--json` flag on any CLI forces JSON regardless of TTY.
+
+**Levels:** `TRACE` (off by default) / `DEBUG` (dev) / `INFO` (lifecycle, default-on) / `WARNING` (recoverable) / `ERROR` (operation failed) / `CRITICAL` (unrecoverable).
+
+**Required fields on every log line** (auto-injected by cloudless logger):
+- `timestamp`, `level`, `logger`, `message`
+- `agent.name`, `agent.version`, `agent.framework`
+- `cloud`, `region`
+- `run.id`, `session.id`, `trace.id`, `span.id`
+
+`trace.id` / `span.id` come from active OTel context — logs and traces share IDs (click from trace to logs in CloudWatch GenAI Obs / Cloud Logging). Matches the `run.id` glue from Q8 (traces ↔ evals); together they form the full observability spine: logs ↔ traces ↔ evals.
+
+**Auto-redaction** (SDK-level, best-effort):
+- Built-in patterns: Bearer tokens, AWS access/secret keys, GCP SA JSON, Cognito JWTs, common provider API keys (`sk-`, `xoxb-`, `gh[pousr]_`).
+- Replaced with `<REDACTED:<class>>`.
+- User-extensible via `cloudless.yaml`:
+  ```yaml
+  logging:
+    redact_patterns:
+      - regex: "ssn=\\d{3}-\\d{2}-\\d{4}"
+        replacement: "<REDACTED:ssn>"
+  ```
+- **Not** a security guarantee; documented in `docs/SECURITY.md`. Tell users not to log sensitive data in the first place.
+
+**Per-component log levels** in `cloudless.yaml`:
+
+```yaml
+logging:
+  default_level: INFO
+  levels:
+    cloudless.runtime.peer: DEBUG
+    cloudless.memory: WARNING
+    cloudless.policy: DEBUG
+    langgraph: WARNING                # silence third-party noise
+```
+
+Most-specific-prefix-wins lookup, matching Python's `logging.getLogger(name)` namespace convention.
+
+**`cloudless logs` CLI:**
+- Streams from CloudWatch Logs / Cloud Logging.
+- `--level <LEVEL>`, `--since 1h`, `--follow`, `--grep <pattern>`.
+- Pretty by default in a TTY; JSON via `--json`.
+
+**Library:** `structlog` for internal logging with a thin stdlib-compatible wrapper so `logging.getLogger(__name__)` still works for contributors who prefer it.
+
+### 9.10 Open-question defaults (Q37)
 
 The smaller open questions surfaced during design were settled with the following defaults:
 
@@ -860,7 +967,7 @@ Runtime enumerates installed plugins at startup, validates Protocol conformance,
 
 ---
 
-## Appendix A: Locked decisions (Q1-Q37)
+## Appendix A: Locked decisions (Q1-Q39)
 
 See [`./DECISIONS.md`](./DECISIONS.md) for a concise ADR-style log.
 
