@@ -82,6 +82,8 @@ v1 (expanded scope locked in Q28 follow-up) ships **all three frameworks on both
 
 AgentCore Runtime is **single-protocol-per-deployment** (HTTP, MCP, A2A, or AG-UI — pick one at deploy time). An agent that needs both user-facing HTTP and peer A2A on AWS requires **two AgentCore deployments** sharing the same source.
 
+**Spike-2 finding (F11a):** AgentCore is also **single-auth-mode-per-deployment.** A runtime configured for JWT inbound rejects SigV4 (403) and vice versa. So an agent that needs user-facing HTTP via SigV4 (IAM) *and* peer A2A via Cognito JWT requires **two runtimes from one ECR image** — and an agent needing HTTP-via-SigV4 + HTTP-via-JWT + A2A-via-JWT could require **three.** Cloudless's deploy planner enumerates `(protocol × auth_mode)` tuples per agent and emits one runtime per tuple. GCP Agent Runtime serves both protocols + both auth modes from one deployment; the asymmetry surfaces only on AWS.
+
 GCP Agent Runtime can serve both protocols from one deployment.
 
 Users declare what they want:

@@ -10,3 +10,7 @@ __pycache__/
 
 # Spike runtime artifacts (transient logs)
 /tmp/spike*.log
+
+# Spike secrets (Cognito client secrets, ephemeral tokens)
+spikes/**/cognito_state.json
+spikes/**/last_token.txt

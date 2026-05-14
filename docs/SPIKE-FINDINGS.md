@@ -143,6 +143,80 @@ The bedrock-agentcore `build_a2a_app()` registers Starlette routes for both `/.w
 
 ---
 
+### F11. Spike 2 PASSED — Cognito M2M JWT works for cross-cloud A2A auth *[Spike 2 — full deploy + GCP-side simulation]*
+
+**Spike:** Spike 2 — Cognito User Pool + Resource Server + M2M App Client; AgentCore runtime with `customJWTAuthorizer` config; verified four code paths.
+
+**Cognito provisioned:**
+- Pool: `us-east-1_byNfuzUNA`
+- Issuer: `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_byNfuzUNA`
+- JWKS URL: `<issuer>/.well-known/jwks.json`
+- Scope: `cloudless/agent.invoke`
+- Domain: `cloudless-spike-02-613112965612.auth.us-east-1.amazoncognito.com`
+- Token URL: `<domain>/oauth2/token`
+
+**AgentCore authorizer_configuration that works:**
+```json
+{
+  "customJWTAuthorizer": {
+    "discoveryUrl": "https://cognito-idp.us-east-1.amazonaws.com/<pool_id>/.well-known/openid-configuration",
+    "allowedClients": ["<client_id>"]
+  }
+}
+```
+
+**Results:**
+
+| Test | Status | Meaning |
+|---|---|---|
+| Valid Cognito Bearer → AgentCore A2A card | **200** | AWS-side JWT inbound auth works |
+| No `Authorization` header | **401** | JWT enforcement is on |
+| Bogus Bearer string | **403** | AgentCore validates signature against Cognito JWKS |
+| SigV4 against JWT-configured runtime | **403** | **Auth modes mutually exclusive per runtime** |
+| PyJWT+JWKS local validation | **PASS** | GCP-side OIDC verification works identically |
+
+**Cognito M2M token claims observed (no `aud` claim):**
+```json
+{
+  "sub": "<client_id>",
+  "token_use": "access",
+  "scope": "cloudless/agent.invoke",
+  "iss": "https://cognito-idp.us-east-1.amazonaws.com/<pool_id>",
+  "client_id": "<client_id>",
+  "exp": <unix>,
+  "iat": <unix>,
+  "version": 2,
+  "jti": "<uuid>"
+}
+```
+
+**Implications for cloudless:**
+
+1. **Q7 fully validated.** The Cognito-as-cross-cloud-IdP pattern works on both sides:
+   - AWS: AgentCore `customJWTAuthorizer` with Cognito issuer + `allowedClients`
+   - GCP: standard OIDC verify against the same JWKS URL using PyJWT or any compatible library
+
+2. **F11a: AgentCore is single-auth-mode-per-runtime.** Combined with Q6's single-protocol-per-runtime finding, a single agent serving both:
+   - User-facing HTTP (SigV4 IAM)
+   - Peer A2A (Cognito JWT)
+   …requires **two AgentCore runtimes from one ECR image.** Possibly more if HTTP and A2A both need to serve multiple auth modes. Cloudless's deploy planner (per Q6) needs to enumerate (protocol × auth-mode) tuples and emit one runtime per tuple.
+
+3. **F11b: Cognito M2M tokens omit the `aud` claim.** Validators must check `client_id` instead — Cognito-specific behavior. cloudless's GCP-side JWT validator needs explicit support for Cognito (and Auth0/Entra/Okta, which DO emit `aud`). Likely API:
+   ```python
+   validator = JWTValidator(
+       issuer=..., 
+       allowed_clients=[...],  # checked against `client_id` AND/OR `aud`
+   )
+   ```
+
+4. **Domain + token URL pattern is non-obvious:** the OAuth2 `/token` endpoint lives at `https://<domain-prefix>.auth.<region>.amazoncognito.com/oauth2/token` — a separate hostname from the issuer URL. Cloudless documentation must surface this for BYO-IdP users.
+
+5. **Cognito M2M billing observed:** $0.015/client/day per AWS pricing. Free tier covers under 50k MAU but M2M clients aren't tracked as MAU. Spike 2 cost: ~$0.01.
+
+**Spike 2 status: ✅ PASS — Q7 validated end-to-end. F11a creates a new architectural follow-up: auth-mode dimension in deploy planning.**
+
+---
+
 ### F10. Spike 1 PASSED — AgentCore A2A agent card matches local card and confirms v0.3 lane *[Spike 1 — full deploy]*
 
 **Spike:** Spike 1 deploy to real AgentCore Runtime, fetch agent card via SigV4.
