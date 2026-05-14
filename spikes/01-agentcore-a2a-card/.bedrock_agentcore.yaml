@@ -1,0 +1,62 @@
+default_agent: cloudless_spike_01
+agents:
+  cloudless_spike_01:
+    name: cloudless_spike_01
+    language: python
+    node_version: '20'
+    entrypoint: agent.py
+    deployment_type: container
+    runtime_type: null
+    platform: linux/arm64
+    container_runtime: none
+    source_path: /Users/nbalawat/development/cloud-agnostic-agentic-ai-applications/spikes/01-agentcore-a2a-card
+    aws:
+      execution_role: arn:aws:iam::613112965612:role/AmazonBedrockAgentCoreSDKRuntime-us-east-1-7258a6e8ab
+      execution_role_auto_create: false
+      account: '613112965612'
+      region: us-east-1
+      ecr_repository: 613112965612.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-cloudless_spike_01
+      ecr_auto_create: false
+      s3_path: null
+      s3_auto_create: true
+      network_configuration:
+        network_mode: PUBLIC
+        network_mode_config: null
+      protocol_configuration:
+        server_protocol: A2A
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
+    bedrock_agentcore:
+      agent_id: cloudless_spike_01-0eCgMF2Kc1
+      agent_arn: arn:aws:bedrock-agentcore:us-east-1:613112965612:runtime/cloudless_spike_01-0eCgMF2Kc1
+      agent_session_id: null
+    codebuild:
+      project_name: bedrock-agentcore-cloudless_spike_01-builder
+      execution_role: arn:aws:iam::613112965612:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1-7258a6e8ab
+      source_bucket: bedrock-agentcore-codebuild-sources-613112965612-us-east-1
+    memory:
+      mode: NO_MEMORY
+      memory_id: null
+      memory_arn: null
+      memory_name: null
+      event_expiry_days: 30
+      first_invoke_memory_check_done: false
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
+    oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false

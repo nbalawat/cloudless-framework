@@ -7,15 +7,17 @@
 
 ## High-impact risks
 
-### R1. AgentCore A2A protocol version drift
+### R1. AgentCore is on A2A spec v0.3 (capability statement, not drift)
 
-**Severity: high. Status: must validate in M2.**
+**Severity: medium. Status: confirmed 2026-05-14 (see SPIKE-FINDINGS.md F3).**
 
-AWS docs show AgentCore agent cards advertising `protocolVersion: 0.3.0` in samples, while upstream A2A spec is at v1.2 under Linux Foundation. Cross-cloud peers built against v1.2 (especially ADK 1.x clients on GCP) may reject AgentCore-served cards or require lenient version handling.
+AgentCore advertises `protocolVersion: 0.3.0` deliberately. a2a-sdk 1.0 implements spec v1.0 with a v0.3 compat lane (`a2a.compat.v0_3.types`). For v0.x cloudless we pin `a2a-sdk>=0.3.9,<1.0.0` and target v0.3 across the stack (AgentCore + Strands + cloudless manifest). The bedrock-agentcore SDK auto-publishes BOTH agent-card paths (`/.well-known/agent-card.json` and the legacy `/.well-known/agent.json`).
 
-**Validation plan**: in M2 demo, confirm the actual `protocolVersion` field AgentCore serves, and confirm Gemini Enterprise / ADK clients accept it.
+**v1 architectural impact:** none — the version match is consistent across our stack.
 
-**Mitigation if drift confirmed**: maintain a card-rewriting middleware in our embedded runtime lib that upgrades AgentCore's card to the latest spec version on emit.
+**Cross-cloud impact:** GCP-side ADK clients targeting v1.0 spec must enable v0.3 compat (or our peer routing layer needs to negotiate). Validate when Spike 10 runs (cross-cloud A2A E2E).
+
+**Migration trigger:** revisit when (a) Strands ships a2a-sdk 1.x compat AND (b) AgentCore moves its `protocolVersion` advertisement to ≥1.0. Track via Q27 compatibility matrix.
 
 ### R2. Google Gen AI SDK migration deadline (June 24, 2026)
 
@@ -82,6 +84,10 @@ AgentCore Browser is a managed Playwright environment. GCP doesn't have a direct
 `cloudless dev`'s Sandbox primitive runs as a local subprocess, not a Firecracker microVM. Untrusted code execution locally has no isolation guarantees.
 
 **Mitigation**: clear security warning in `cloudless dev` output; recommend disabling sandbox in dev when running untrusted prompts; document that production behavior differs.
+
+### ~R11. Strands A2A executor broken against a2a-sdk 1.0+~ — RESOLVED 2026-05-14
+
+**Status: closed.** Pinning `a2a-sdk>=0.3.9,<1.0.0` (currently resolves to 0.3.26) unblocks `StrandsA2AExecutor`. AgentCore itself advertises `protocolVersion: 0.3.0` and the bedrock-agentcore SDK exposes both v0.3 and v1.x agent-card paths — so v0.3 is the architecturally correct target for v0.x cloudless. Migration to a2a-sdk 1.x deferred until Strands + AgentCore both move to spec v1.0. See SPIKE-FINDINGS.md F3 for the full investigation.
 
 ### R10. Eval cassette portability and bit-stability
 

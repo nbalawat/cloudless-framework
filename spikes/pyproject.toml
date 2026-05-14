@@ -1,0 +1,35 @@
+[project]
+name = "cloudless-spikes"
+version = "0.0.0"
+description = "Real-cloud validation spikes for the cloudless cross-cloud agentic AI framework"
+requires-python = ">=3.11"
+dependencies = [
+    # AWS — Bedrock + AgentCore. boto3 >= 1.39.8 required for AgentCore (per research/01).
+    "boto3>=1.40.0",
+    "botocore>=1.40.0",
+    # AgentCore in-container SDK + starter toolkit (CLI)
+    "bedrock-agentcore>=0.1.0",
+    "bedrock-agentcore-starter-toolkit>=0.1.0",
+    # GCP — Gemini Enterprise Agent Runtime + the new Google Gen AI SDK
+    "google-cloud-aiplatform[agent-engines]>=1.80.0",
+    "google-genai>=0.10.0",
+    # A2A protocol SDK.
+    # Pinned to 0.3.x: bedrock-agentcore 1.9.1 + strands-agents 1.39.0 both
+    # target A2A spec v0.3; a2a-sdk 1.0 removed top-level helpers Strands
+    # imports (DataPart/TextPart, new_agent_text_message, new_task). Migrate
+    # to 1.x when AgentCore + Strands upgrade. See SPIKE-FINDINGS.md F3.
+    "a2a-sdk>=0.3.9,<1.0.0",
+    "fastapi>=0.115.0",   # required by strands.multiagent.a2a.server.A2AServer
+    # Frameworks we touch in spikes
+    "strands-agents>=1.0.0",
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-aws>=0.2.0",
+    # Common utilities
+    "httpx>=0.27.0",
+    "pydantic>=2.7.0",
+    "structlog>=24.0.0",
+    "rich>=13.0.0",
+    "pyjwt>=2.8.0",
+    "cryptography>=42.0.0",
+]

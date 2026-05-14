@@ -1,0 +1,12 @@
+# Python virtualenvs created by uv inside the repo
+spikes/.venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Local secrets (cloudless dev convention from Q13)
+.cloudless/dev-secrets.yaml
+.cloudless/cache/
+
+# Spike runtime artifacts (transient logs)
+/tmp/spike*.log
