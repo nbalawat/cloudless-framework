@@ -54,6 +54,27 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Where to materialize the artifact (default: .cloudless/build/<name>).",
     )
 
+    # logs
+    p_logs = sub.add_parser("logs", help="Stream a deployed agent's CloudWatch logs.")
+    p_logs.add_argument("agent_name")
+    p_logs.add_argument("--region", default="us-east-1")
+    p_logs.add_argument("--since", default="10m", help="e.g. 10m, 1h, 24h, 7d")
+    p_logs.add_argument("--follow", "-f", action="store_true")
+    p_logs.add_argument("--endpoint", default="DEFAULT")
+
+    # versions
+    p_ver = sub.add_parser("versions", help="List versions + endpoint aliases for an agent.")
+    p_ver.add_argument("agent_name")
+    p_ver.add_argument("--region", default="us-east-1")
+
+    # rollback
+    p_rb = sub.add_parser("rollback", help="Roll an endpoint alias back to a prior version.")
+    p_rb.add_argument("agent_name")
+    p_rb.add_argument("--to", dest="to_version", default=None,
+                      help="Target version (default: 2nd-most-recent).")
+    p_rb.add_argument("--endpoint", default="DEFAULT")
+    p_rb.add_argument("--region", default="us-east-1")
+
     # init
     p_init = sub.add_parser(
         "init",
@@ -99,6 +120,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             agent_name=args.agent_name,
             host=args.host,
             port=args.port,
+        )
+
+    if args.command == "logs":
+        from cloudless.cli import ops
+        return ops.logs_command(
+            agent_name=args.agent_name, region=args.region,
+            since=args.since, follow=args.follow, endpoint=args.endpoint,
+        )
+
+    if args.command == "versions":
+        from cloudless.cli import ops
+        return ops.versions_command(agent_name=args.agent_name, region=args.region)
+
+    if args.command == "rollback":
+        from cloudless.cli import ops
+        return ops.rollback_command(
+            agent_name=args.agent_name, to_version=args.to_version,
+            endpoint=args.endpoint, region=args.region,
         )
 
     if args.command == "deploy":
