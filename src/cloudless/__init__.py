@@ -42,11 +42,14 @@ from cloudless.runtime import Context, InMemoryContext
 from cloudless.catalog import (
     LLM,
     InMemoryBackend,
+    LocalFileBackend,
     Memory,
     MemoryBackend,
     MemoryEvent,
     MemoryRecord,
     ModelAlias,
+    Secrets,
+    SecretsBackend,
     resolve_model,
 )
 
@@ -86,6 +89,9 @@ __all__ = [
     "MemoryEvent",
     "MemoryRecord",
     "InMemoryBackend",
+    "Secrets",
+    "SecretsBackend",
+    "LocalFileBackend",
     # Exceptions (Q21)
     "CloudlessError",
     "TransientError",

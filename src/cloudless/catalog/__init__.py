@@ -20,8 +20,10 @@ from cloudless.catalog.memory import (
     MemoryEvent,
     MemoryRecord,
 )
+from cloudless.catalog.secrets import LocalFileBackend, Secrets, SecretsBackend
 
 __all__ = [
     "LLM", "ModelAlias", "resolve_model",
     "Memory", "MemoryBackend", "MemoryEvent", "MemoryRecord", "InMemoryBackend",
+    "Secrets", "SecretsBackend", "LocalFileBackend",
 ]
