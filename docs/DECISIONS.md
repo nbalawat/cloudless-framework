@@ -1,6 +1,6 @@
 # cloudless — Architecture Decision Log
 
-> Concise ADR-style log of decisions Q1–Q29 from the design interview.
+> Concise ADR-style log of decisions Q1–Q37 from the design interview.
 > Full rationale in [`ARCHITECTURE.md`](./ARCHITECTURE.md). Research evidence in [`research/`](./research/).
 > Status: design-locked; implementation pending.
 
@@ -35,6 +35,14 @@
 | Q27 | Framework versioning | **Strict semver + 6-month deprecation window + published compatibility matrix + LTS on even MAJORs** | 2026-05-14 |
 | Q28 | v1 milestones | **5 milestones over ~22-26 weeks** (M1 bones → M2 cross-cloud → M3 production primitives → M4 operational maturity → M5 extended catalog). Pulled VectorStore + Identity vault + Strands/GCP + ADK/AWS + fallbacks + cross-region memory + Browser into v1 | 2026-05-14 |
 | Q29 | Naming + positioning | **Defer name; keep `cloudless` working name** until v1.0 branding exercise. Positioning: *"Write your agent once. Ship it to any cloud."* | 2026-05-14 |
+| Q30 | CLI command catalog | **8 groups, ~30 commands** (lifecycle / config & infra / testing & quality / cost & ops / migration & introspection / long-running / identity / meta). Common flags `--env`, `--json`, `--watch`. Auth via local aws/gcloud CLI. | 2026-05-14 |
+| Q31 | Documentation site | **Diátaxis IA + Mintlify primary + auto-API + 6 tutorials.** Docusaurus is the escape hatch. CI fails on doc drift. | 2026-05-14 |
+| Q32 | Telemetry + governance | **Anonymous opt-out telemetry, off in CI, transparent field registry**; **lightweight governance at v0.x, formalize before v1.0** (CLA via CLA Assistant + RFC process + Contributor Covenant 2.1 + SECURITY.md). | 2026-05-14 |
+| Q33 | Security + supply chain | **Documented threat model + SBOM + Sigstore + reproducible builds + pre-v1.0 third-party audit.** SLSA-aligned posture; annual audit cadence post-v1.0. | 2026-05-14 |
+| Q34 | Performance SLOs | **Publish targets + continuous benchmark + public weekly dashboard; no OSS SLA** (SLA = commercial). 9 metrics; both clouds, all 3 framework × cloud combos. | 2026-05-14 |
+| Q35 | Extensibility model | **Python entry points + `typing.Protocol` per extension point + first-party adapters in-tree.** 6 protocols: FrameworkAdapter / CloudAdapter / MemoryBackend / EvalJudge / HitlChannel / ToolSource. | 2026-05-14 |
+| Q36 | Starter templates | **6 canonical templates in-tree** (`hello` / `chat-memory` / `rag` / `multi-agent` / `research-task` / `ops-bot`) + community templates via `--template github:user/repo`. Weekly real-cloud CI on each template. | 2026-05-14 |
+| Q37 | Smaller open-question defaults | **Accepted 10 defaults** (Cognito Standard tier, OTel sampling, manifest TTL refresh, model-alias resolution table, custom-strategy size validation, GCP cold-start bench in M4, Slack approval app template, Grafana 11+ mixed sources, manifest signing deferred to v1.5, core-path CI per PR + full matrix nightly). | 2026-05-14 |
 
 ## How decisions interact
 
@@ -46,14 +54,17 @@ A handful of pairs are tightly coupled — changing one usually forces a re-look
 - **Q14 (memory verbs) + Q9 (catalog scope)** — verb taxonomy fixes the API surface that adapters must implement on each cloud.
 - **Q17 (Task primitive) + Q21 (resilience) + Q20 (cost)** — long-running tasks compose all three: checkpoints survive transient errors, accumulate cost over hours, and respect caps.
 - **Q22 (open-core) + Q23 (multi-tenancy in commercial)** — the line we draw between open and commercial.
+- **Q33 (security audit) + Q34 (perf SLOs) + Q27 (LTS)** — together form the "enterprise-ready" posture distinguishing v1.0 from v0.x.
+- **Q35 (plugin protocols) + Q5 (framework rollout) + Q11 (Python-only at v1)** — extension model determines how MAF lands in v3 and how a TypeScript SDK could later plug in.
+- **Q32 (telemetry registry) + Q33 (SBOM) + Q34 (public bench dashboard)** — the three public-transparency artifacts that build trust without an SLA.
 
 ## Decisions deliberately NOT made yet
 
 - **The real name** — deferred to v1.0 branding exercise (Q29).
-- **CLI command catalog full reference** — sketched throughout but not formalized; will be auto-generated from CLI source pre-v1.
-- **Documentation site domain** — depends on naming.
-- **CI/CD pipeline for cloudless itself** — implementation-time decision.
-- **Specific Bedrock vs Vertex LLM mapping table** (which Claude / Gemini variant maps to "claude-opus" alias) — implementation-time.
+- **CI/CD pipeline for cloudless itself** (branch strategy, release channels, pre-release flow) — conventional choices; defer to M1.
+- **Logging conventions** (log levels, structured JSON, redaction defaults) — conventional choices; defer to M1.
+- **Documentation site domain** — depends on naming (Q29).
+- **Specific Bedrock vs Vertex LLM mapping table** (which Claude / Gemini variant maps to "claude-opus" alias) — Q37 OQ4 covers the *mechanism* (alias table maintained in cloudless); concrete values are implementation-time.
 - **OpenTelemetry semantic-convention version** — pin during M1.
 
 ## How to add a new decision

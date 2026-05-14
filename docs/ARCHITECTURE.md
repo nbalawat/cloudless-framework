@@ -1,6 +1,6 @@
 # cloudless — Architecture
 
-> Status: design-locked through 29 questions. Implementation pending. Working name `cloudless`.
+> Status: design-locked through 37 questions. Implementation pending. Working name `cloudless`.
 > Last updated: 2026-05-14.
 
 ## Table of contents
@@ -13,6 +13,8 @@
 6. [Operations](#6-operations)
 7. [Quality: evals + observability](#7-quality-evals--observability)
 8. [Distribution and versioning](#8-distribution-and-versioning)
+9. [Project & ecosystem conventions](#9-project--ecosystem-conventions)
+10. [Extensibility model](#10-extensibility-model)
 
 ---
 
@@ -666,7 +668,199 @@ This shapes docs voice and feature framing. We honestly caveat in docs that fram
 
 ---
 
-## Appendix A: Locked decisions (Q1-Q29)
+---
+
+## 9. Project & ecosystem conventions
+
+### 9.1 CLI command catalog (Q30)
+
+Eight groups, ~30 commands. Common flags: `--env`, `--json`, `--watch`/`--follow`, `CLOUDLESS_PROJECT_DIR` override. Auth via local `aws`/`gcloud` CLI credentials — cloudless never asks for cloud secrets directly.
+
+**Lifecycle:** `init`, `dev`, `deploy`, `rollback`, `promote`, `traffic-split`, `versions`, `logs`, `agents`.
+**Config & infra:** `config show/set`, `secrets set/get/list`, `manifest show`, `dashboards install`.
+**Testing & quality:** `test`, `test peers --strict`, `eval run/diff/gate`, `eval datasets list`.
+**Cost & ops:** `cost report/top-sessions/forecast`, `cost budget set/list`.
+**Migration & introspection:** `migrate scan/wrap/check`, `lint`, `doctor`.
+**Long-running:** `tasks list/show`, `tasks approvals pending`, `tasks approve/reject/cancel`.
+**Identity:** `identity show/rotate-secret/grant`.
+**Meta:** `version`, `help`, `upgrade-check`.
+
+Deliberately *not* in v1 surface: `cloudless plan` (AgentCore lacks reliable dry-run); `cloudless workspace` (v2); `cloudless studio` web UI (v1.5 commercial); `cloudless registry sync` (folded into `deploy --sync-registries` flag).
+
+### 9.2 Documentation strategy (Q31)
+
+- **Information architecture:** Diátaxis (tutorials / how-tos / reference / explanation).
+- **Toolchain:** Mintlify primary (fast, polished, free for OSS); Docusaurus as escape hatch if we outgrow it. Content is portable Markdown.
+- **API reference:** auto-generated from Python source + CLI docstrings + JSON Schema for `cloudless.yaml`. CI fails on docs drift.
+- **Six v1 tutorials (one per milestone-aligned use case):** *Hello, cloudless* / *Your first cross-cloud agent pair* / *Long-running research agent with HITL* / *Migrating an existing Strands agent* / *Cost-capped customer support agent* / *Production deploy with eval gate*.
+- **Versioning:** `latest` = main; pinned `v0.x`, `v1.0`, etc. snapshots. Compatibility matrix (Q27) updates weekly in docs via CI.
+- **Translations:** English at v1.0; Japanese/Chinese mid-priority v1.5.
+- **Domain:** TBD on Q29 naming. Mintlify handles brand changes cleanly.
+
+### 9.3 Telemetry (Q32a)
+
+**Anonymous, opt-out, transparent, off in detected CI.**
+
+- Default opt-out; banner on first run; enable via `cloudless config set telemetry.enabled true` or `CLOUDLESS_TELEMETRY=1`.
+- Auto-disabled when `CI=true`, GitHub Actions, GitLab CI, etc.
+- **Collected fields** (registry in `docs/telemetry.md`): CLI command names + flags (not values), framework choice, cloud choice, OS, Python version, cloudless version, anonymous machine UUID.
+- **Never collected:** agent code, prompts, model outputs, secrets, cloud account IDs.
+- **Backend:** PostHog or Plausible. No Google Analytics.
+- New fields require a PR that updates the registry. Auditable.
+
+### 9.4 Governance (Q32b)
+
+**Lightweight at v0.x; formalize pre-v1.0.**
+
+- **v0.x:** small core-team review of PRs; informal proposals via GitHub issues + Discord/Slack.
+- **Pre-v1.0:**
+  - `MAINTAINERS.md` with Core / Adapters / Docs / Security roles.
+  - RFC process for breaking changes and new top-level primitives; 14-day comment window; lazy-consensus accept; template in `.github/RFC_TEMPLATE.md`.
+  - **Contributor License Agreement (CLA)** via CLA Assistant — preserves flexibility for future relicense / LF AI donation.
+  - **Code of Conduct:** Contributor Covenant 2.1.
+  - **Public roadmap:** GitHub Project board mirroring `docs/ROADMAP.md`.
+  - **Security disclosure policy:** `SECURITY.md`; ≤72-hour acknowledgment; coordinated disclosure for high-severity; CVE issuance via GitHub Security Advisories.
+- **Post-v1.0:** consider Linux Foundation hosting if enterprise adoption demands neutral governance.
+
+### 9.5 Security posture and supply chain (Q33)
+
+**Documented threat model + strict supply-chain hygiene + pre-v1.0 third-party audit + Sigstore-signed releases.**
+
+**Threat model (full table in `docs/SECURITY.md` pre-v1.0):**
+- User agent code, `cloudless.yaml`, and `Tool.from_aws_lambda`/`from_gcp_cloud_run` targets: **trusted** (user's own code in user's account).
+- Embedded runtime lib: trusted by user but **our responsibility** — signed releases.
+- A2A peers: trusted only if Cognito JWT validates AND peer is in manifest allowlist.
+- `Tool.from_mcp_server(url=...)`: **untrusted** — schema validated, policies enforced.
+- LLM output: **untrusted** — prompt injection real; mitigated by cloud-native guardrails before tool calls / external sends.
+- Generated container image: reproducible from source + lockfile + pinned base; Sigstore-signed.
+
+**Supply-chain hygiene must-haves pre-v1.0:**
+- Reproducible builds via committed `uv.lock`; CI binary-diff check.
+- CycloneDX SBOM per release; published as release asset.
+- PyPI Trusted Publishers from GitHub Actions; releases signed with Sigstore (`cosign`-verifiable).
+- Container images to GHCR with `cosign sign` + SLSA Level 3 provenance via GitHub OIDC.
+- Dependabot + Renovate + `pip-audit` in CI.
+- License compliance enforced via `pip-licenses` CI check.
+- Secret scanning (GitHub native + `detect-secrets` pre-commit).
+- `cloudless doctor` warns on outdated cloudless versions with known CVEs.
+- `cloudless iam scaffold` emits minimum-permission CloudFormation/Terraform for the execution role.
+
+**Pre-v1.0 third-party audit:** Trail of Bits / NCC Group (or equivalent). Scope: cross-cloud auth flow, embedded runtime, manifest baking + peer routing, secret resolution, policy bypass surface, supply chain. Public report alongside v1.0.
+
+**Cadence post-v1.0:** annual third-party audit; quarterly internal review.
+
+**Explicit non-protections** (documented):
+- Malicious agent code running in the user's own account.
+- Compromised cloud credentials.
+- Poisoned OpenAPI specs / rogue MCP servers (without user policies).
+
+### 9.6 Performance targets (Q34)
+
+**Published targets + continuous benchmarking + no OSS-tier SLA** (SLA is commercial-tier upsell).
+
+| Metric | Target |
+|---|---|
+| Cold start (first invoke after idle) | p95 < 2.5s |
+| Warm-invocation cloudless overhead | p95 < 50ms |
+| Deploy time (`cloudless deploy`) | p50 < 60s, p95 < 180s |
+| Manifest update / alias swap (rollback) | p95 < 5s |
+| A2A cross-cloud peer call (round-trip overhead) | p95 < 200ms |
+| `cloudless dev` startup (3-agent topology) | p95 < 10s |
+| `cloudless eval run` per-record overhead | p95 < 100ms |
+| Memory `recall_facts(top_k=5)` | p95 < 250ms |
+| Tool invocation via Gateway (warm) | p95 < 150ms |
+
+- Public weekly dashboard at `docs/perf` (subdomain post-naming).
+- Benchmarks run against all 3 v1 framework × cloud combos on both clouds.
+- Regression alert: >20% week-over-week p95 degradation fails CI and emits an issue.
+- Targets are design anchors, not PR gates; revising a target requires a public RFC.
+
+### 9.7 Starter templates (Q36)
+
+Six canonical templates ship in-tree at v1; community templates via `cloudless init --template github:user/repo`.
+
+| Template | Demonstrates | Framework | Clouds |
+|---|---|---|---|
+| `hello` (default) | Bare-minimum LangGraph echo agent | LangGraph | AWS or GCP |
+| `chat-memory` | Multi-turn chat + semantic memory | LangGraph | AWS or GCP |
+| `rag` | Document Q&A with VectorStore | LangGraph | AWS or GCP |
+| `multi-agent` | Supervisor + 2 workers across 3 frameworks + 2 clouds | LangGraph + Strands + ADK | Both |
+| `research-task` | Long-running `@cloudless.task` + HITL via Slack | LangGraph | AWS (showcases 8h async) |
+| `ops-bot` | Strands with tools + cost-cap policy + Bedrock Guardrails | Strands | AWS |
+
+Each template ships: agent source, `cloudless.yaml`, tools/policies as relevant, eval dataset (5-10 cases), `cloudless.testing` tests, README, `.cloudless/dev-secrets.yaml.example`.
+
+**Template CI:** every template goes through `init → deploy → test → eval` in real cloud accounts weekly. Broken template = release blocker.
+
+### 9.8 Open-question defaults (Q37)
+
+The smaller open questions surfaced during design were settled with the following defaults:
+
+| # | Question | Default |
+|---|---|---|
+| OQ1 | Cognito feature tier | Standard tier with M2M App Clients (with secret) |
+| OQ2 | Per-agent OTel sampling rate | 100% dev, 10% prod, adaptive auto-degrade to 1% under throttle |
+| OQ3 | Manifest update propagation | Bake-time manifest + 5-min TTL refresh from known cloud-storage URL; fallback to embedded copy |
+| OQ4 | Bedrock / Gemini model deprecations | Model-alias resolution table maintained in cloudless; warnings via `cloudless lint`; refreshed on `upgrade-check` |
+| OQ5 | AgentCore Memory custom-strategy 30 KB cap | `with_custom_strategy()` validates at construction with clear error |
+| OQ6 | GCP cold-start under multi-day resume | Benchmark in M4 as part of continuous suite; feature-gate the path |
+| OQ7 | Slack OAuth approval app | Ship `cloudless/slack-approval-app` GitHub template; install in customer Slack workspace |
+| OQ8 | Cost dashboard cross-cloud unification | Grafana 11+ mixed data sources (CloudWatch + Cloud Logging plugins); ship dashboard JSON via `dashboards install` |
+| OQ9 | Manifest signing (A2A v1.2 signed cards) | Defer to v1.5; when shipped, use Sigstore keyless (same toolchain as release signing) |
+| OQ10 | Test coverage SLA | Core path on every PR (each framework × each cloud × LLM+Memory+A2A = 18 cells, ~9 min); full matrix (66 cells) nightly |
+
+---
+
+## 10. Extensibility model
+
+### 10.1 Plugin architecture (Q35)
+
+**Python entry points + `typing.Protocol` contracts per extension point + first-party adapters ship in-tree.**
+
+**Extension points** (each a documented `Protocol` in `cloudless/protocols.py`):
+
+| Protocol | Purpose | First-party implementations |
+|---|---|---|
+| `FrameworkAdapter` | Wrap an agent framework into the runner contract | LangGraph, Strands, ADK at v1; MAF at v3 |
+| `CloudAdapter` | Build artifact, deploy, resolve secrets per cloud | AWS, GCP at v1; Azure as community plugin later |
+| `MemoryBackend` | Implement `add_event` / `recall_facts` / `summarize_session` / etc. | AgentCore Memory, Memory Bank |
+| `EvalJudge` | Score (input, output, reference) | LLM judges (Claude / Gemini), deterministic, embedding similarity |
+| `HitlChannel` | Deliver approval requests, listen for responses | Webhook, polling, Slack at v1; Discord, Teams as community plugins |
+| `ToolSource` | Discover tools, invoke them | Decorator, OpenAPI, AWS Lambda, GCP Cloud Run, MCP server |
+
+**Discovery:** Python entry points in plugin packages' `pyproject.toml`:
+
+```toml
+[project.entry-points."cloudless.frameworks"]
+maf = "cloudless_maf:MAFAdapter"
+
+[project.entry-points."cloudless.clouds"]
+azure = "cloudless_azure:AzureFoundryAdapter"
+```
+
+Runtime enumerates installed plugins at startup, validates Protocol conformance, registers by declared name. `cloudless plugins list` shows installed; `cloudless plugins doctor` runs conformance checks.
+
+**Repo strategy:**
+- **In-tree:** first-party adapters (LangGraph/Strands/ADK frameworks, AWS/GCP clouds, all v1 service catalog primitives, built-in judges, webhook/poll/Slack HITL).
+- **Out-of-tree, first-party-blessed** (separate packages in `cloudless` GitHub org): MAF (v3), Azure (v2.x), experimental adapters.
+- **Community:** any user-published package implementing a Protocol gets auto-discovered.
+
+**Protocol versioning:**
+- Protocol changes are *always* a cloudless MAJOR (Q27 semver).
+- Plugins declare `cloudless>=1.0,<2.0` in their `pyproject.toml`.
+
+**Why entry points (vs subclass-and-register):** standard Python pattern (pytest, click, pre-commit, mkdocs); no import-time side effects; works with all packaging tools.
+
+**Why `typing.Protocol` (vs ABCs):** structural typing matches duck-typing intuition; no multiple-inheritance gotchas; IDE autocomplete preserved; adapters don't inherit from a cloudless base class.
+
+**What we deliberately do NOT support at v1:**
+- Runtime plugin loading from arbitrary URLs or paths — installation goes through package managers only.
+- Plugin sandboxing — same trust model as any pip install.
+- Plugin marketplace UI — v2+ commercial-tier concern.
+
+---
+
+## Appendix A: Locked decisions (Q1-Q37)
 
 See [`./DECISIONS.md`](./DECISIONS.md) for a concise ADR-style log.
 

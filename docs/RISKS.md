@@ -1,7 +1,7 @@
 # cloudless — Risks and Open Questions
 
 > What we know we don't know. What could break our assumptions. What needs to be validated before we commit further.
-> Last updated 2026-05-14.
+> Last updated 2026-05-14 (Q37 closed the 10 OQs originally listed here).
 
 ---
 
@@ -93,47 +93,22 @@ We assume cassettes recorded against Bedrock can be replayed against Vertex (and
 
 ---
 
-## Open questions that need answers before v1.0
+## Open questions — defaults locked at Q37 (2026-05-14)
 
-### OQ1. Which Cognito feature tier do we provision?
+The ten open questions surfaced during design have been settled with the following defaults. Listed here for context; the canonical reference is `docs/ARCHITECTURE.md` §9.8 and `docs/DECISIONS.md` Q37.
 
-We need M2M client-credentials (which requires Cognito's "App Client with secret"). Standard tier handles this; advanced tier features (custom email/SMS, MFA) aren't needed. Confirm pricing assumption (free at our scale) holds for production usage patterns.
-
-### OQ2. Per-agent OTel sampling rate
-
-Default 100% sampling is expensive in production. We need a sane default sampling rate (probably 100% in dev, 10% in prod) and an SLO that drops sampling if the OTel sink throttles.
-
-### OQ3. Manifest update propagation on rolling deploys
-
-When a manifest entry changes (e.g., agent A moves from `us-east-1` to `us-west-2`), how do we propagate to peers without redeploying every agent? Options: (a) accept staleness, (b) re-deploy all peers automatically on manifest change, (c) make manifest fetchable from a known URL at agent start. Need to pick before M2.
-
-### OQ4. How do we handle Bedrock model deprecations gracefully?
-
-Bedrock periodically retires models (Anthropic Claude 2 went, Claude 3.5 will eventually go). Our LLM aliases (`claude-opus-4-7` etc.) should remain stable; we need a model-alias resolution table maintained in cloudless that maps logical names to current best Bedrock model IDs, and we need a deprecation-warning flow when a user pins a soon-to-retire model.
-
-### OQ5. AgentCore Memory custom strategy prompt token budget
-
-AgentCore custom-strategy `AppendToPrompt` is capped at 30 KB. We need to document this clearly in `with_custom_strategy()` docs and provide a `validate_prompt()` helper.
-
-### OQ6. GCP Agent Runtime cold-start under multi-day load
-
-GCP just shipped multi-day execution at Cloud Next '26. Cold-start behavior on resumption from a 3-day-old checkpoint is not benchmarked. We should run a load test in M4 once long-running is wired.
-
-### OQ7. Slack OAuth flow inside `ctx.request_approval(deliver_via=["slack"])`
-
-Slack approval flow requires a Slack app, OAuth scope grants, and a callback to receive the approval/reject button click. We need to publish a `cloudless/slack-approval-app` template that customers install in their workspace.
-
-### OQ8. Cost dashboard cross-cloud unification
-
-Default Grafana dashboard pulls from CloudWatch Logs + Cloud Logging. Unifying two log streams in one panel requires a Grafana data source that can do log-aggregation across both. Verify Grafana 11+ supports this without a separate ETL.
-
-### OQ9. Manifest signing for cross-cloud trust
-
-A2A v1.2 supports digitally signed Agent Cards for cryptographic domain verification. Do we sign our manifest entries? Adds key management complexity. Defer to v1.5 unless a customer asks.
-
-### OQ10. Test coverage SLA for the framework × cloud matrix
-
-We claim Strands/AWS, Strands/GCP, ADK/AWS, ADK/GCP, LangGraph/AWS, LangGraph/GCP at v1.0. That's 6 combinations × 11 primitives = 66 integration-test cells. Confirm CI budget and test runtime; consider a "core path" CI (all 6 combos × LLM+Memory+A2A) on every PR vs. a "full matrix" CI nightly.
+| # | Question | Default | Revisit if |
+|---|---|---|---|
+| OQ1 | Cognito feature tier | Standard tier with M2M App Clients (with secret); free at our scale | Pricing model changes |
+| OQ2 | Per-agent OTel sampling rate | 100% dev, 10% prod, adaptive auto-degrade to 1% under throttle | Observability sink cost dominates |
+| OQ3 | Manifest update propagation | Bake-time manifest + 5-min TTL refresh from known cloud-storage URL; fallback to embedded copy if refresh fails | Cold-storage fetch becomes a SPOF |
+| OQ4 | Bedrock / Gemini model deprecations | Model-alias resolution table maintained in cloudless (`claude-opus` → current best model ID); warnings via `cloudless lint`; refreshed on `upgrade-check` | New cloud provider added |
+| OQ5 | AgentCore Memory custom-strategy 30 KB prompt cap | `Memory.with_custom_strategy()` validates prompt size at construction with clear file:line error | AWS raises or removes the cap |
+| OQ6 | GCP cold-start under multi-day resume | Benchmark in M4 as part of continuous suite (Q34); feature-gate the multi-day path with a documented caveat | Benchmark reveals a hard limit |
+| OQ7 | Slack OAuth approval app | Ship `cloudless/slack-approval-app` GitHub template; customer installs in their Slack workspace | Slack API breaking changes |
+| OQ8 | Cost dashboard cross-cloud unification | Grafana 11+ mixed data sources (CloudWatch + Cloud Logging plugins); dashboard JSON ships via `cloudless dashboards install` | Grafana licensing changes |
+| OQ9 | Manifest signing for cross-cloud trust (A2A v1.2 signed cards) | Defer to v1.5; when shipped, use Sigstore keyless (same toolchain as release signing — Q33) | Enterprise customer requires it pre-v1.0 |
+| OQ10 | Test-coverage SLA for framework × cloud matrix | Core path on every PR (each framework × each cloud × LLM+Memory+A2A = 18 cells, ~9 min); full matrix (66 cells) nightly | CI bill exceeds budget |
 
 ---
 
