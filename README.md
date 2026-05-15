@@ -7,27 +7,38 @@ unchanged to **AWS Bedrock AgentCore** or **GCP Vertex AI Agent Runtime** ("Gemi
 Enterprise Agent Platform"), with first-class cross-cloud agent-to-agent (A2A)
 collaboration.
 
-Status: **v0.x — internal alpha**. All 13 service-catalog primitives are real-cloud
-validated (see [`docs/CERTIFICATION.md`](./docs/CERTIFICATION.md)). Public APIs may
-break until v1.0.
+Write your agent in **any of 5 frameworks** (LangGraph, Strands Agents, Google ADK,
+Anthropic Claude Agent SDK, Microsoft Agent Framework) — ship it to **either cloud**.
+cloudless ships the cross-cloud bridges natively (no LiteLLM, no OpenAI-compat shim);
+every framework × cloud cell is real-cloud certified.
+
+Status: **v0.x — internal alpha**. All 13 service-catalog primitives + the full
+5 × 2 framework/cloud matrix are real-cloud validated — see
+[`docs/CERTIFICATION.md`](./docs/CERTIFICATION.md). Public APIs may break until v1.0.
 
 ---
 
 ## Five-minute quickstart
 
 ```bash
-pip install cloudless[langgraph,aws]
+# Pick your framework + cloud extras:
+pip install cloudless[langgraph,aws]      # LangGraph on AWS
+# or: cloudless[strands,gcp]              # Strands on GCP
+# or: cloudless[adk,aws]                  # ADK on AWS (uses cloudless.bridges.BedrockADKLlm)
+# or: cloudless[maf,gcp]                  # MAF on GCP (uses cloudless.bridges.VertexMAFChatClient)
+# or: cloudless[claude_sdk,aws]           # Claude Agent SDK, env-var routed to Bedrock
+
 cloudless init my-app --framework langgraph
 cd my-app
-cloudless doctor                         # preflight: verify creds + env
-cloudless dev hello                      # local server on :8080, real Bedrock
+cloudless doctor                          # preflight: verify creds + env
+cloudless dev hello                       # local server on :8080, real cloud LLM
 curl -X POST localhost:8080/invocations -d '{"prompt": "hi"}'
-cloudless deploy hello                   # ships to AWS AgentCore (~100s)
+cloudless deploy hello                    # ships to AWS AgentCore (~100s) or GCP Agent Engine (~210s)
 cloudless logs hello --follow
 ```
 
-For GCP, swap `[aws]` for `[gcp]` and run `cloudless deploy hello` after
-`gcloud auth application-default login`.
+The `cloudless deploy` command picks the cloud from `cloudless.yaml`; no agent
+code changes when you swap clouds.
 
 ---
 
@@ -35,9 +46,7 @@ For GCP, swap `[aws]` for `[gcp]` and run `cloudless deploy hello` after
 
 | Layer | Capability | Status |
 |---|---|---|
-| Frameworks | LangGraph, Strands Agents | ✅ |
-| Frameworks | Google ADK | partial (GCP-only) |
-| Frameworks | Microsoft Agent Framework | deferred to v3 |
+| Frameworks | LangGraph, Strands Agents, Google ADK, Anthropic Claude Agent SDK, Microsoft Agent Framework — **all five on both AWS Bedrock and GCP Vertex** (10-cell matrix; cloudless ships the cross-cloud bridges, no LiteLLM) | ✅ |
 | Service catalog | LLM (Bedrock Nova/Claude, Vertex Gemini) — async via `asyncio.to_thread` | ✅ |
 | Service catalog | Multi-modal LLM input — `images=`, `videos=`, `audios=` | ✅ |
 | Service catalog | Embeddings — Bedrock Titan/Cohere, Vertex `text-embedding-005`, `task_type`, `output_dimensionality` | ✅ |
@@ -66,18 +75,17 @@ Complete primitive list and pass/fail per real-cloud test: see
 
 ## Authoring an agent
 
+Pick your framework, pick your cloud, write `build()`:
+
 ```python
-# src/agents/hello.py
-from typing_extensions import TypedDict
+# LangGraph + AWS Bedrock
+import cloudless
 from langgraph.graph import StateGraph, START, END
 from langchain.chat_models import init_chat_model
-
-import cloudless
-
+from typing_extensions import TypedDict
 
 class State(TypedDict):
     messages: list
-
 
 @cloudless.agent(name="hello", framework="langgraph", interfaces=["http", "a2a"])
 class HelloAgent(cloudless.LangGraphAgent):
@@ -85,20 +93,49 @@ class HelloAgent(cloudless.LangGraphAgent):
         llm = init_chat_model("us.amazon.nova-micro-v1:0", model_provider="bedrock_converse")
         g = StateGraph(State)
         g.add_node("chat", lambda s: {"messages": [llm.invoke(s["messages"])]})
-        g.add_edge(START, "chat")
-        g.add_edge("chat", END)
+        g.add_edge(START, "chat"); g.add_edge("chat", END)
         return g.compile()
+```
+
+```python
+# Strands on GCP — cloudless ships the Vertex bridge
+import cloudless
+from strands import Agent
+from cloudless.adapters.frameworks._bridges import VertexStrandsModel
+
+@cloudless.agent(name="hello", framework="strands")
+class HelloAgent(cloudless.StrandsAgent):
+    def build(self):
+        return Agent(
+            model=VertexStrandsModel(model="gemini-2.0-flash", project="my-gcp-proj"),
+            system_prompt="Reply concisely.",
+        )
+```
+
+```python
+# Google ADK on AWS — cloudless ships the Bedrock bridge
+import cloudless
+from google.adk.agents import Agent
+from cloudless.adapters.frameworks._bridges import BedrockADKLlm
+
+@cloudless.agent(name="hello", framework="adk")
+class HelloAgent(cloudless.ADKAgent):
+    def build(self):
+        return Agent(
+            name="hello",
+            model=BedrockADKLlm(model="us.amazon.nova-micro-v1:0", region="us-east-1"),
+            instruction="Reply concisely.",
+        )
 ```
 
 ```yaml
 # cloudless.yaml
 project: my-app
-default_cloud: aws
+default_cloud: aws    # or gcp
 
 agents:
   hello:
-    cloud: aws
-    framework: langgraph
+    framework: langgraph    # or strands / adk / claude_sdk / maf
     interfaces: [http, a2a]
 
 service_catalog:
@@ -110,15 +147,35 @@ policies:
   retries: {attempts: 3, backoff_seconds: 0.25}
 ```
 
-That's it. `cloudless deploy hello` packages the agent, creates an AgentCore Runtime,
-wires Cognito + IAM + ECR + CodeBuild, and prints the endpoint URL.
+`cloudless deploy hello` packages the agent, creates the cloud-native runtime
+(AgentCore on AWS / Agent Engine on GCP), wires identity (Cognito + IAM on AWS,
+ADC + service account on GCP), builds the container/blob, and prints the endpoint.
+
+---
+
+## The 5 × 2 framework × cloud matrix
+
+|                                  | AWS Bedrock | GCP Vertex AI |
+|----------------------------------|---|---|
+| **LangGraph**                    | `langchain-aws.ChatBedrock` | `langchain-google-vertexai.ChatVertexAI` |
+| **Strands Agents**               | native `BedrockModel` | `cloudless.bridges.VertexStrandsModel` |
+| **Google ADK**                   | `cloudless.bridges.BedrockADKLlm` | native `Agent(model="gemini-*")` |
+| **Anthropic Claude Agent SDK**   | env-var route (`CLAUDE_CODE_USE_BEDROCK=1`) | env-var route (`CLAUDE_CODE_USE_VERTEX=1`) |
+| **Microsoft Agent Framework**    | `agent_framework_bedrock.BedrockChatClient` | `cloudless.bridges.VertexMAFChatClient` |
+
+cloudless ships **three native bridges** (`BedrockADKLlm`, `VertexStrandsModel`,
+`VertexMAFChatClient`) for the cells where the framework's first-party SDK only
+covers one cloud. Each bridge is ~150 lines, calls the cloud's official SDK
+directly (boto3 / google-genai), and matches the host framework's pluggable
+Model/ChatClient interface 1:1 — no LiteLLM, no OpenAI-compat shim.
 
 ---
 
 ## Designed-in safety
 
-- **No mock testing.** Every cloud primitive has a real-cloud integration test —
-  see `tests/integration/`. 27 cheap-tier tests against real AWS+GCP, ~$0.005/run.
+- **No mock testing.** Every cloud primitive — and every framework × cloud
+  cell — has a real-cloud integration test. 434 unit + ~110 integration tests
+  against real AWS + GCP + Anthropic, all sub-$0.01 per run.
 - **Cost caps.** Every invocation tracks tokens against a per-model pricing table
   and a session USD cap from `cloudless.yaml`. `CostCapExceeded` is a typed exception.
 - **Cloud-portable governance.** `@cloudless.policy` runs Python policies regardless
