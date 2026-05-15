@@ -6,7 +6,7 @@ move fast and prefer small, well-scoped PRs over large redesigns.
 ## Quick start
 
 ```bash
-git clone https://github.com/<TBD>/cloudless && cd cloudless
+git clone https://github.com/nbalawat/cloudless-framework && cd cloudless
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,langgraph,strands,aws,gcp]"
 

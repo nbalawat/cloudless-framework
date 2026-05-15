@@ -5,7 +5,7 @@ site_author: cloudless contributors
 copyright: Apache 2.0 · cloudless contributors
 
 repo_name: cloudless
-repo_url: https://github.com/cloudless/cloudless
+repo_url: https://github.com/nbalawat/cloudless-framework
 edit_uri: edit/main/docs/
 
 docs_dir: docs
@@ -68,7 +68,7 @@ extra:
   generator: false
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/cloudless/cloudless
+      link: https://github.com/nbalawat/cloudless-framework
       name: cloudless on GitHub
   version:
     provider: mike

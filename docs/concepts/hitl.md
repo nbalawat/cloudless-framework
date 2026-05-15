@@ -60,7 +60,7 @@ points:
 - **Debate**: when judge confidence is low
 - **Tool-as-agent**: via a `before_tool` policy
 
-All ten are exercised in the [multi-agent pattern integration tests](https://github.com/cloudless/cloudless/tree/main/tests/integration/patterns).
+All ten are exercised in the [multi-agent pattern integration tests](https://github.com/nbalawat/cloudless-framework/tree/main/tests/integration/patterns).
 
 ## Querying pending tasks
 

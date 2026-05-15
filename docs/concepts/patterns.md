@@ -23,7 +23,7 @@ The ten canonical patterns from the literature, all validated against
 | Tool-as-agent        | LLM decides when to invoke a sub-agent       | `test_pattern_tool_as_agent.py`               |
 
 Each test exercises the pattern with a HITL pause at the canonical
-insertion point. Read [research dossier #8](https://github.com/cloudless/cloudless/blob/main/docs/research/08-multi-agent-patterns.md)
+insertion point. Read [research dossier #8](https://github.com/nbalawat/cloudless-framework/blob/main/docs/research/08-multi-agent-patterns.md)
 for full descriptions, canonical references, and code sketches.
 
 ## What cloudless does NOT do

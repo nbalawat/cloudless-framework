@@ -38,7 +38,7 @@ Always 7 words. Always a period after "once". Always present-tense verbs.
 > Vertex AI without rewriting. LangGraph, Strands, ADK. Multi-modal, HITL,
 > 10 multi-agent patterns. 504 tests passing across both clouds. Apache 2.0.
 >
-> github.com/<TBD>/cloudless
+> github.com/nbalawat/cloudless-framework
 
 ## Feature blurbs (~25 words each)
 

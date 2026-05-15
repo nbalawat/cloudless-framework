@@ -9,6 +9,6 @@ design documents — every architectural choice is captured here.
 - [Risks](../RISKS.md) — open questions and known unknowns
 - [Spike findings](../SPIKE-FINDINGS.md) — real-cloud gotchas F1–Fn (read before deploying!)
 - [Certification](../CERTIFICATION.md) — every passing test, every primitive validated
-- [Research dossiers](https://github.com/cloudless/cloudless/tree/main/docs/research) — AgentCore, Vertex, A2A, multi-agent patterns
+- [Research dossiers](https://github.com/nbalawat/cloudless-framework/tree/main/docs/research) — AgentCore, Vertex, A2A, multi-agent patterns
 
-If you're contributing, also read [`CONTRIBUTING.md`](https://github.com/cloudless/cloudless/blob/main/CONTRIBUTING.md).
+If you're contributing, also read [`CONTRIBUTING.md`](https://github.com/nbalawat/cloudless-framework/blob/main/CONTRIBUTING.md).

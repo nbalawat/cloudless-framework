@@ -5,7 +5,7 @@ title: Brand
 # Brand
 
 The cloudless brand at a glance. Full guidelines live in
-[`brand-assets/guidelines.md`](https://github.com/cloudless/cloudless/blob/main/brand-assets/guidelines.md).
+[`brand-assets/guidelines.md`](https://github.com/nbalawat/cloudless-framework/blob/main/brand-assets/guidelines.md).
 
 ## Name
 
@@ -81,7 +81,7 @@ The palette is intentionally distinct from AWS orange and GCP blue/red/yellow.
 ## Logo
 
 Three SVG concepts live in
-[`brand-assets/logos/`](https://github.com/cloudless/cloudless/tree/main/brand-assets/logos):
+[`brand-assets/logos/`](https://github.com/nbalawat/cloudless-framework/tree/main/brand-assets/logos):
 a wordmark with the spark dot, a portal mark with deploy arrow, and an open-bracket "C".
 Mark-only variants in the same folder for favicons and small contexts.
 
@@ -92,4 +92,4 @@ Direct. Technical but warm. Lead with code, explain after. No "leverage",
 
 For full voice guidelines, the do-list, the don't-list, and approved
 marketing copy: see
-[`brand-assets/`](https://github.com/cloudless/cloudless/tree/main/brand-assets).
+[`brand-assets/`](https://github.com/nbalawat/cloudless-framework/tree/main/brand-assets).

@@ -115,4 +115,4 @@ Every block / transform emits an `AuditRecord` to the configured sink chain.
 - [Multi-agent patterns](../concepts/patterns.md) — orchestrate beyond one agent
 - [Deploy to AWS](../guides/deploy-aws.md) — what `cloudless deploy` does behind the scenes
 - [Deploy to GCP](../guides/deploy-gcp.md) — the Vertex Agent Engine path
-- [Examples](https://github.com/cloudless/cloudless/tree/main/examples) — including the kitchen-sink agent
+- [Examples](https://github.com/nbalawat/cloudless-framework/tree/main/examples) — including the kitchen-sink agent

@@ -13,7 +13,7 @@ title: cloudless — write your agent once, ship it to any cloud
 
 <div class="cl-cta">
   <a class="primary" href="getting-started/quickstart/">Start in 5 min</a>
-  <a class="ghost" href="https://github.com/cloudless/cloudless">GitHub</a>
+  <a class="ghost" href="https://github.com/nbalawat/cloudless-framework">GitHub</a>
 </div>
 
 </div>
