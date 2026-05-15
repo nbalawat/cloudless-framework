@@ -1,8 +1,6 @@
 """Unit tests for metric emission to CloudWatch + Cloud Monitoring."""
 from __future__ import annotations
 
-import pytest
-
 from cloudless.runtime import metrics as M
 
 

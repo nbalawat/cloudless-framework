@@ -27,15 +27,14 @@ immediately. Production code should account for this.
 """
 from __future__ import annotations
 
-import time
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
 
-from cloudless.catalog.memory import MemoryBackend, MemoryEvent, MemoryRecord
+from cloudless.catalog.memory import MemoryEvent, MemoryRecord
 
 
 class AgentCoreBackend:
@@ -47,7 +46,7 @@ class AgentCoreBackend:
         memory_id: str,
         region: str = "us-east-1",
         actor_id_template: str = "{scope}",
-        default_session_id: Optional[str] = None,
+        default_session_id: str | None = None,
     ) -> None:
         self.memory_id = memory_id
         self.region = region
@@ -62,7 +61,7 @@ class AgentCoreBackend:
     def _actor_id(self, scope: str) -> str:
         return self.actor_id_template.format(scope=scope)
 
-    def _session_id(self, metadata: Optional[dict[str, Any]]) -> str:
+    def _session_id(self, metadata: dict[str, Any] | None) -> str:
         if metadata and metadata.get("session_id"):
             return str(metadata["session_id"])
         return self._default_session_id
@@ -73,7 +72,7 @@ class AgentCoreBackend:
 
     async def add_event(
         self, *, scope: str, role: str, content: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> MemoryEvent:
         actor_id = self._actor_id(scope)
         session_id = self._session_id(metadata)
@@ -88,7 +87,7 @@ class AgentCoreBackend:
                 memoryId=self.memory_id,
                 actorId=actor_id,
                 sessionId=session_id,
-                eventTimestamp=datetime.now(timezone.utc),
+                eventTimestamp=datetime.now(UTC),
                 payload=[{"conversational": {"content": {"text": content},
                                               "role": agentcore_role}}],
             )
@@ -113,7 +112,7 @@ class AgentCoreBackend:
 
     async def summarize_session(
         self, *, scope: str, session_id: str,
-    ) -> Optional[MemoryRecord]:
+    ) -> MemoryRecord | None:
         # AgentCore returns one or more summary records; we return the most
         # recent. summarize_session is best-effort: if no SUMMARIZATION
         # strategy is configured on the memory, returns None.
@@ -158,7 +157,7 @@ class AgentCoreBackend:
                 scope=scope,
                 role=role,
                 content="\n".join(text_parts),
-                timestamp=ev.get("eventTimestamp", datetime.now(timezone.utc)),
+                timestamp=ev.get("eventTimestamp", datetime.now(UTC)),
                 metadata={"session_id": ev.get("sessionId", "")},
             ))
         return events
@@ -211,7 +210,9 @@ class AgentCoreBackend:
     def _translate(e: ClientError) -> Exception:
         """Map boto3 errors to cloudless exception hierarchy (Q21)."""
         from cloudless.exceptions import (
-            AuthenticationError, InvalidInputError, ThrottledError,
+            AuthenticationError,
+            InvalidInputError,
+            ThrottledError,
         )
         code = e.response.get("Error", {}).get("Code", "")
         if code in ("ThrottlingException", "ServiceQuotaExceededException"):

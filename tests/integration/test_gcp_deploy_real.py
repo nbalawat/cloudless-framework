@@ -14,7 +14,6 @@ import time
 
 import pytest
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -29,7 +28,7 @@ def gcp_available() -> bool:
         import vertexai
         vertexai.init(project="agentic-experiments", location="us-central1")
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -39,7 +38,6 @@ async def test_cloudless_gcp_deploy_hello_world(deploy_enabled, gcp_available, t
     if not deploy_enabled:
         pytest.skip("Set CLOUDLESS_RUN_DEPLOY_TESTS=1 to run (costs ~$0.02, takes ~3 min)")
 
-    import cloudless
     from cloudless.adapters.gcp import deploy
 
     # 1. Scaffold a project with --cloud gcp
@@ -72,7 +70,7 @@ async def test_cloudless_gcp_deploy_hello_world(deploy_enabled, gcp_available, t
     )
     print(f"[gcp-deploy] Done in {time.time() - t0:.1f}s. Resource: {result.resource_name}")
 
-    assert result.resource_name.startswith(f"projects/")
+    assert result.resource_name.startswith("projects/")
     assert "reasoningEngines/" in result.resource_name
     assert result.project == project
 
@@ -98,7 +96,7 @@ async def test_cloudless_gcp_deploy_hello_world(deploy_enabled, gcp_available, t
         try:
             agent_engines.delete(result.resource_name, force=True)
             print(f"[cleanup] Deleted {result.resource_name}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"[cleanup] delete failed: {e}")
 
 

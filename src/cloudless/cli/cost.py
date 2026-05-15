@@ -23,14 +23,13 @@ import glob
 import json
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from rich.console import Console
 from rich.table import Table
 
 from cloudless.runtime.pricing import estimate_cost_usd
-
 
 _console = Console()
 

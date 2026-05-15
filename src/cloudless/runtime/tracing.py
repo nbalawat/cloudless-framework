@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import contextlib
 import os
-from typing import Any, Iterator, Optional
-
+from collections.abc import Iterator
+from typing import Any
 
 _INITIALIZED = False
 _TRACER = None  # opentelemetry.trace.Tracer or None
@@ -38,10 +38,10 @@ def _has_otel() -> bool:
 
 def configure(
     *,
-    service_name: Optional[str] = None,
-    agent_name: Optional[str] = None,
-    agent_version: Optional[str] = None,
-    cloud: Optional[str] = None,
+    service_name: str | None = None,
+    agent_name: str | None = None,
+    agent_version: str | None = None,
+    cloud: str | None = None,
     exporter: str = "auto",
 ) -> None:
     """Configure OTel tracer. Idempotent. Safe to call without OTel installed.
@@ -67,7 +67,8 @@ def configure(
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import (
-        BatchSpanProcessor, ConsoleSpanExporter,
+        BatchSpanProcessor,
+        ConsoleSpanExporter,
     )
 
     resource_attrs = {
@@ -140,7 +141,7 @@ def span(name: str, **attrs: Any) -> Iterator[Any]:
             if v is not None:
                 try:
                     sp.set_attribute(k, v)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     pass
         yield sp
 
@@ -154,7 +155,7 @@ def set_attr(name: str, value: Any) -> None:
     if sp is not None:
         try:
             sp.set_attribute(name, value)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
@@ -168,5 +169,5 @@ def record_exception(exc: BaseException) -> None:
         try:
             sp.record_exception(exc)
             sp.set_status(trace.Status(trace.StatusCode.ERROR, str(exc)))
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass

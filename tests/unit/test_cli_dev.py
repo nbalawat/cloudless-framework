@@ -1,9 +1,8 @@
 """Unit tests for `cloudless dev` — no cloud calls."""
 from __future__ import annotations
 
-import tempfile
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, AsyncIterator
 
 import pytest
 
@@ -49,7 +48,7 @@ class TestDiscovery:
         assert cls.__cloudless_metadata__.name == "testbed-agent"
 
     def test_raises_on_missing(self, project):
-        with pytest.raises(LookupError, match="No @cloudless.agent class"):
+        with pytest.raises(LookupError, match=r"No @cloudless\.agent class"):
             dev_cmd._discover_agent_class("does-not-exist", project / "src" / "agents")
 
     def test_raises_on_missing_dir(self, tmp_path):

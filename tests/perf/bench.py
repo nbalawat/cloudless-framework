@@ -5,11 +5,10 @@ p50/p95/p99 and mean over N iterations.
 """
 from __future__ import annotations
 
-import asyncio
 import statistics
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable
 
 
 @dataclass

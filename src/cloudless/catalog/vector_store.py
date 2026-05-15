@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ class InMemoryVectorBackend:
         if not texts:
             return 0
         vectors = await self._embeddings.embed(texts)
-        for d, v in zip(docs, vectors):
+        for d, v in zip(docs, vectors, strict=False):
             self._docs[d["id"]] = d
             self._vectors[d["id"]] = v
         return len(docs)
@@ -93,7 +93,7 @@ class InMemoryVectorBackend:
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(x * x for x in b))
     if na == 0.0 or nb == 0.0:
@@ -132,10 +132,10 @@ class VectorStore:
         *,
         backend: str | VectorStoreBackend = "in_memory",
         embeddings=None,
-        kb_id: Optional[str] = None,
+        kb_id: str | None = None,
         region: str = "us-east-1",
-        datastore_id: Optional[str] = None,
-        project: Optional[str] = None,
+        datastore_id: str | None = None,
+        project: str | None = None,
         location: str = "global",
     ) -> None:
         if isinstance(backend, str):
@@ -148,9 +148,9 @@ class VectorStore:
 
     @staticmethod
     def _build_backend(
-        name: str, *, embeddings, kb_id: Optional[str], region: str,
-        datastore_id: Optional[str] = None,
-        project: Optional[str] = None,
+        name: str, *, embeddings, kb_id: str | None, region: str,
+        datastore_id: str | None = None,
+        project: str | None = None,
         location: str = "global",
     ) -> VectorStoreBackend:
         if name == "in_memory":

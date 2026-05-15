@@ -28,17 +28,19 @@ import asyncio
 import functools
 import random
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, TypeVar
 
 from cloudless.exceptions import (
     CircuitOpen,
     CloudlessError,
     PermanentError,
-    TimeoutError as CloudlessTimeoutError,
     TransientError,
 )
-
+from cloudless.exceptions import (
+    TimeoutError as CloudlessTimeoutError,
+)
 
 T = TypeVar("T")
 
@@ -86,7 +88,7 @@ async def with_retry(
             )
             wait += random.uniform(0, jitter)
             await asyncio.sleep(wait)
-        except (asyncio.TimeoutError, ConnectionError) as e:
+        except (TimeoutError, ConnectionError) as e:
             last = e
             if i == attempts - 1:
                 raise CloudlessTimeoutError(str(e)) from e
@@ -106,7 +108,7 @@ async def with_timeout(fn: Callable[[], Awaitable[T]], *, seconds: float) -> T:
     """Run `fn` with a timeout; translate to cloudless.TimeoutError."""
     try:
         return await asyncio.wait_for(fn(), timeout=seconds)
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         raise CloudlessTimeoutError(f"operation exceeded {seconds}s") from e
 
 

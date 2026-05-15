@@ -11,13 +11,16 @@ who want thinking can pass `extended_thinking=True`.
 """
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from cloudless.chunks import TextChunk
 from cloudless.exceptions import (
     AuthenticationError,
     InvalidInputError,
     ThrottledError,
+)
+from cloudless.exceptions import (
     TimeoutError as CloudlessTimeoutError,
 )
 
@@ -32,10 +35,10 @@ class GeminiBackend:
         project: str,
         location: str = "us-central1",
         extended_thinking: bool = False,
-        safety_settings: Optional[list[dict]] = None,
-        model_armor_template: Optional[str] = None,
+        safety_settings: list[dict] | None = None,
+        model_armor_template: str | None = None,
         grounding: bool | str = False,
-        cached_content: Optional[str] = None,
+        cached_content: str | None = None,
     ) -> None:
         """
         Args:
@@ -86,7 +89,7 @@ class GeminiBackend:
     def _build_config(
         self,
         *,
-        system: Optional[str],
+        system: str | None,
         max_tokens: int,
     ) -> dict:
         config: dict[str, Any] = {"max_output_tokens": max_tokens}
@@ -125,12 +128,12 @@ class GeminiBackend:
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 512,
         ctx: Any = None,
-        images: Optional[list[dict]] = None,
-        videos: Optional[list[dict]] = None,
-        audios: Optional[list[dict]] = None,
+        images: list[dict] | None = None,
+        videos: list[dict] | None = None,
+        audios: list[dict] | None = None,
     ) -> str:
         contents = self._build_contents(prompt, images, videos, audios)
         # google-genai is sync — off-load so asyncio.gather parallelizes.
@@ -142,7 +145,7 @@ class GeminiBackend:
                 contents=contents,
                 config=self._build_config(system=system, max_tokens=max_tokens),
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise self._translate(e) from e
 
         text = getattr(resp, "text", None) or ""
@@ -167,12 +170,12 @@ class GeminiBackend:
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 512,
         ctx: Any = None,
-        images: Optional[list[dict]] = None,
-        videos: Optional[list[dict]] = None,
-        audios: Optional[list[dict]] = None,
+        images: list[dict] | None = None,
+        videos: list[dict] | None = None,
+        audios: list[dict] | None = None,
     ) -> AsyncIterator[TextChunk]:
         contents = self._build_contents(prompt, images, videos, audios)
         import asyncio
@@ -183,7 +186,7 @@ class GeminiBackend:
                 contents=contents,
                 config=self._build_config(system=system, max_tokens=max_tokens),
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise self._translate(e) from e
 
         in_tokens = 0
@@ -214,9 +217,9 @@ class GeminiBackend:
     def _build_contents(
         self,
         prompt: str,
-        images: Optional[list[dict]],
-        videos: Optional[list[dict]] = None,
-        audios: Optional[list[dict]] = None,
+        images: list[dict] | None,
+        videos: list[dict] | None = None,
+        audios: list[dict] | None = None,
     ) -> Any:
         """Build the `contents` parameter for generate_content."""
         if not (images or videos or audios):
@@ -268,8 +271,12 @@ class GeminiBackend:
         # google-api-core hierarchy (used by some Vertex paths)
         try:
             from google.api_core.exceptions import (
-                DeadlineExceeded, ResourceExhausted, Unauthenticated,
-                InvalidArgument, PermissionDenied, NotFound,
+                DeadlineExceeded,
+                InvalidArgument,
+                NotFound,
+                PermissionDenied,
+                ResourceExhausted,
+                Unauthenticated,
             )
         except ImportError:
             return e

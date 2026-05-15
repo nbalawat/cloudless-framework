@@ -5,8 +5,6 @@ import json
 import time
 from pathlib import Path
 
-import pytest
-
 from cloudless.runtime.manifest import Manifest, ManifestRefresher
 
 

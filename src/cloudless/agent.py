@@ -11,18 +11,18 @@ The decorator records metadata on the class so `cloudless deploy` can
 discover and emit the right deployment artifacts per Q4 (cloud-native
 artifact per cloud) and Q6 (declarative interfaces).
 
-Framework-specific bases (LangGraphAgent, StrandsAgent, ADKAgent) live
-in cloudless.adapters.frameworks.*; this module provides only the
-framework-agnostic abstract base.
+Framework-specific bases (LangGraphAgent, StrandsAgent, ADKAgent,
+ClaudeAgentSDKAgent, MAFAgent) live in cloudless.adapters.frameworks.*;
+this module provides only the framework-agnostic abstract base.
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable, Optional, TypeVar
+from typing import Any, TypeVar
 
 from cloudless.chunks import Chunk
-
 
 _T = TypeVar("_T", bound="Agent")
 
@@ -41,13 +41,13 @@ class AgentMetadata:
     name: str
     """Stable identifier, lowercase-hyphenated. Used in URL paths + manifest."""
 
-    framework: Optional[str] = None
-    """One of {'langgraph', 'strands', 'adk', 'maf', None}. None = custom."""
+    framework: str | None = None
+    """One of {'langgraph', 'strands', 'adk', 'claude_sdk', 'maf', None}. None = custom."""
 
     interfaces: tuple[str, ...] = ("http",)
     """Protocols the agent serves. Subset of {'http', 'a2a', 'mcp', 'ag-ui'}."""
 
-    description: Optional[str] = None
+    description: str | None = None
     """Human-readable description; surfaces in the A2A agent card."""
 
     version: str = "0.1.0"
@@ -97,9 +97,9 @@ class Agent(ABC):
 def agent(
     name: str,
     *,
-    framework: Optional[str] = None,
+    framework: str | None = None,
     interfaces: tuple[str, ...] | list[str] = ("http",),
-    description: Optional[str] = None,
+    description: str | None = None,
     version: str = "0.1.0",
     tags: tuple[str, ...] | list[str] = (),
 ) -> Callable[[type[_T]], type[_T]]:
@@ -129,7 +129,7 @@ def agent(
             "(commonly ['http'] for user-facing or ['a2a'] for peer-only)"
         )
 
-    valid_frameworks = {"langgraph", "strands", "adk", "maf", None}
+    valid_frameworks = {"langgraph", "strands", "adk", "claude_sdk", "maf", None}
     if framework not in valid_frameworks:
         raise ValueError(
             f"@cloudless.agent: unknown framework {framework!r}. "

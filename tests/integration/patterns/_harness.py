@@ -25,8 +25,7 @@ import pytest
 
 import cloudless
 from cloudless.chunks import Chunk, PauseChunk
-from cloudless.runtime.tasks import TaskRecord, get_task, resume
-
+from cloudless.runtime.tasks import TaskRecord, resume
 
 GCP_KEY = Path.home() / "development" / "fsi-banking-gcp-usecases" / "keys" / "agentic-experiments-71fb77221637.json"
 GCP_PROJECT = "agentic-experiments"
@@ -81,7 +80,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("AWS credentials not configured")
         return False
 
@@ -102,7 +101,7 @@ def gcp_available() -> bool:
         import google.auth
         google.auth.default()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("GCP credentials not configured")
         return False
 

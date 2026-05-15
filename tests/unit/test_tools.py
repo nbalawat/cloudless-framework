@@ -1,8 +1,6 @@
 """Unit tests for cloudless.Tool — local construction + invocation."""
 from __future__ import annotations
 
-import pytest
-
 import cloudless
 from cloudless.catalog.tools import Tool
 

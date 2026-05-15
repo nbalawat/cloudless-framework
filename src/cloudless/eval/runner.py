@@ -4,11 +4,11 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Optional
 
-from cloudless.eval.metrics import Metric, MetricScore
+from cloudless.eval.metrics import Metric
 
 
 @dataclass(frozen=True)
@@ -16,8 +16,8 @@ class EvalCase:
     """One row of an eval dataset."""
     id: str
     prompt: str
-    expected_contains: Optional[str] = None
-    expected_regex: Optional[str] = None
+    expected_contains: str | None = None
+    expected_regex: str | None = None
     metadata: dict = field(default_factory=dict)
 
 
@@ -37,7 +37,7 @@ class EvalResult:
 class EvalRun:
     """A whole eval run: dataset × target × metrics → results."""
     run_id: str
-    dataset_path: Optional[str]
+    dataset_path: str | None
     started_at: float
     duration_s: float
     results: list[EvalResult]
@@ -57,7 +57,7 @@ class EvalDataset:
         self.cases = cases
 
     @classmethod
-    def from_jsonl(cls, path: str | Path) -> "EvalDataset":
+    def from_jsonl(cls, path: str | Path) -> EvalDataset:
         cases: list[EvalCase] = []
         with Path(path).open() as f:
             for i, line in enumerate(f):
@@ -90,8 +90,8 @@ async def run_eval(
     target: TargetFn,
     metrics: list[Metric],
     *,
-    run_id: Optional[str] = None,
-    dataset_path: Optional[str] = None,
+    run_id: str | None = None,
+    dataset_path: str | None = None,
 ) -> EvalRun:
     """Execute dataset against target; score each response with every metric."""
     run_id = run_id or uuid.uuid4().hex
@@ -101,7 +101,7 @@ async def run_eval(
     for case in dataset.cases:
         try:
             response = await target(case.prompt)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             response = f"<ERROR: {type(e).__name__}: {e}>"
         for metric in metrics:
             score = await metric.evaluate(case=case, response=response)
@@ -118,7 +118,7 @@ async def run_eval(
         s["total"] += 1
         if r.passed:
             s["passed"] += 1
-    for k, v in summary.items():
+    for _k, v in summary.items():
         v["pass_rate"] = v["passed"] / v["total"] if v["total"] else 0.0
 
     return EvalRun(

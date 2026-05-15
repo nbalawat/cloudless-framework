@@ -34,7 +34,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -222,8 +221,8 @@ class AgentCoreDeployer:
         self,
         *,
         region: str = "us-east-1",
-        cloudless_version: Optional[str] = None,
-        cli_path: Optional[str] = None,
+        cloudless_version: str | None = None,
+        cli_path: str | None = None,
     ) -> None:
         from cloudless._version import __version__ as default_version
         self.region = region
@@ -231,7 +230,7 @@ class AgentCoreDeployer:
         # Lazy: looked up on first deploy() so artifact generation is testable
         # without bedrock-agentcore-starter-toolkit on PATH.
         self._cli_path_override = cli_path
-        self._cli_path_cached: Optional[str] = None
+        self._cli_path_cached: str | None = None
 
     @property
     def cli_path(self) -> str:
@@ -273,9 +272,9 @@ class AgentCoreDeployer:
         agent_class: type,
         build_dir: Path,
         *,
-        framework: Optional[str] = None,
-        extra_user_files: Optional[dict[str, str]] = None,
-        protocol: Optional[str] = None,
+        framework: str | None = None,
+        extra_user_files: dict[str, str] | None = None,
+        protocol: str | None = None,
     ) -> Path:
         """Write Dockerfile + entrypoint + requirements + user_agent.py to build_dir.
 
@@ -394,10 +393,10 @@ class AgentCoreDeployer:
         self,
         agent_class: type,
         *,
-        build_dir: Optional[Path] = None,
-        framework: Optional[str] = None,
-        extra_user_files: Optional[dict[str, str]] = None,
-        protocol: Optional[str] = None,
+        build_dir: Path | None = None,
+        framework: str | None = None,
+        extra_user_files: dict[str, str] | None = None,
+        protocol: str | None = None,
     ) -> DeploymentResult:
         """Materialize artifact + invoke agentcore configure + deploy. Returns ARN."""
         meta = agent_class.__cloudless_metadata__
@@ -516,10 +515,10 @@ def deploy(
     agent_class: type,
     *,
     region: str = "us-east-1",
-    build_dir: Optional[Path] = None,
-    framework: Optional[str] = None,
-    extra_user_files: Optional[dict[str, str]] = None,
-    protocol: Optional[str] = None,
+    build_dir: Path | None = None,
+    framework: str | None = None,
+    extra_user_files: dict[str, str] | None = None,
+    protocol: str | None = None,
 ) -> DeploymentResult:
     """One-shot AgentCore deploy. Returns DeploymentResult with the ARN."""
     return AgentCoreDeployer(region=region).deploy(

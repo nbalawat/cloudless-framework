@@ -12,7 +12,7 @@ Supports:
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 class VertexEmbeddingsBackend:
@@ -22,8 +22,8 @@ class VertexEmbeddingsBackend:
         model_id: str,
         project: str,
         location: str = "us-central1",
-        task_type: Optional[str] = None,
-        output_dimensionality: Optional[int] = None,
+        task_type: str | None = None,
+        output_dimensionality: int | None = None,
     ) -> None:
         from google import genai
         self.model_id = model_id
@@ -33,7 +33,7 @@ class VertexEmbeddingsBackend:
         self.output_dimensionality = output_dimensionality
         self._client = genai.Client(vertexai=True, project=project, location=location)
 
-    async def embed(self, texts: list[str], *, task_type: Optional[str] = None) -> list[list[float]]:
+    async def embed(self, texts: list[str], *, task_type: str | None = None) -> list[list[float]]:
         config: dict[str, Any] = {}
         # Per-call task_type overrides constructor-level default
         effective_task = task_type or self.task_type
@@ -47,7 +47,7 @@ class VertexEmbeddingsBackend:
             if config:
                 kwargs["config"] = config
             resp = self._client.models.embed_content(**kwargs)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise self._translate(e) from e
 
         result: list[list[float]] = []

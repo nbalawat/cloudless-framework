@@ -11,7 +11,6 @@ import pytest
 
 from cloudless.runtime.tasks import TaskRecord
 
-
 # ----------------------------- AWS adapter ------------------------------ #
 
 

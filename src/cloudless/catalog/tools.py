@@ -22,11 +22,11 @@ deploy-time concern (M2+). For M1.5 we ship local + AWS Lambda invocation.
 """
 from __future__ import annotations
 
-import asyncio
 import inspect
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Protocol
+from typing import Any
 
 
 @dataclass
@@ -44,8 +44,8 @@ class Tool:
     metadata: dict = field(default_factory=dict)
 
     async def invoke(self, args: dict) -> Any:
-        from cloudless.runtime.policy import get_registry
         from cloudless.runtime import tracing
+        from cloudless.runtime.policy import get_registry
         reg = get_registry()
         args = reg.run("before_tool", tool_name=self.name, args=dict(args))["args"]
         with tracing.span(f"tool.{self.name}", **{"tool.name": self.name}):
@@ -67,9 +67,9 @@ class Tool:
         cls,
         fn: Callable[..., Any],
         *,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-    ) -> "Tool":
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Tool:
         """Wrap a Python function as a Tool.
 
         The function's signature (param names + type hints) is introspected
@@ -81,7 +81,7 @@ class Tool:
         try:
             import typing as _typing
             hints = _typing.get_type_hints(fn)
-        except Exception:  # noqa: BLE001
+        except Exception:
             hints = {}
         params_schema = _signature_to_json_schema(sig, hints)
         # docstring → description fallback
@@ -103,11 +103,11 @@ class Tool:
         cls,
         arn: str,
         *,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        parameters: Optional[dict] = None,
+        name: str | None = None,
+        description: str | None = None,
+        parameters: dict | None = None,
         region: str = "us-east-1",
-    ) -> "Tool":
+    ) -> Tool:
         """Wrap an existing AWS Lambda as a Tool. Real-cloud invocations on
         each call via boto3 `Invoke`."""
         import boto3
@@ -140,10 +140,10 @@ class Tool:
         cls,
         spec_url_or_dict: str | dict,
         *,
-        operation_id: Optional[str] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-    ) -> "Tool":
+        operation_id: str | None = None,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Tool:
         """Wrap one operation of an OpenAPI spec.
 
         For M1.5 we fetch the spec, find the matching operation, and build
@@ -194,9 +194,9 @@ class Tool:
         url: str,
         *,
         tool_name: str,
-        auth: Optional[Callable[[], str]] = None,
-        description: Optional[str] = None,
-    ) -> "Tool":
+        auth: Callable[[], str] | None = None,
+        description: str | None = None,
+    ) -> Tool:
         """Proxy to a remote MCP server's tool.
 
         For M1.5: minimal JSON-RPC client. AgentCore Gateway integration
@@ -243,7 +243,7 @@ _PY_TO_JSON = {
 
 
 def _signature_to_json_schema(
-    sig: inspect.Signature, hints: Optional[dict] = None,
+    sig: inspect.Signature, hints: dict | None = None,
 ) -> dict:
     """Build a minimal JSON Schema from a Python function signature.
 
@@ -268,7 +268,7 @@ def _signature_to_json_schema(
     return schema
 
 
-def _find_operation(spec: dict, operation_id: Optional[str]) -> tuple[str, str, Optional[dict]]:
+def _find_operation(spec: dict, operation_id: str | None) -> tuple[str, str, dict | None]:
     for path, methods in (spec.get("paths") or {}).items():
         for method, op in methods.items():
             if method not in ("get", "post", "put", "patch", "delete"):
@@ -284,10 +284,10 @@ def _find_operation(spec: dict, operation_id: Optional[str]) -> tuple[str, str, 
 
 
 def tool(
-    fn: Optional[Callable] = None,
+    fn: Callable | None = None,
     *,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
+    name: str | None = None,
+    description: str | None = None,
 ):
     """Decorator: wrap a function as a `Tool`.
 

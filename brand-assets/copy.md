@@ -22,10 +22,11 @@ Always 7 words. Always a period after "once". Always present-tense verbs.
 
 > cloudless is a Python framework for building production agents that
 > deploy unchanged to AWS Bedrock AgentCore or GCP Vertex AI Agent Engine.
-> You write your agent once — in LangGraph, Strands, or ADK — and
-> `cloudless deploy` handles the cloud-native runtime, identity, memory,
-> secrets, observability, and cross-cloud A2A wiring. No mocked tests;
-> every primitive is validated against real cloud.
+> You write your agent once — in **LangGraph, Strands, Google ADK, Anthropic
+> Claude Agent SDK, or Microsoft Agent Framework** — and `cloudless deploy`
+> handles the cloud-native runtime, identity, memory, secrets, observability,
+> and cross-cloud A2A wiring. No mocked tests; every primitive — and every
+> framework — is validated against real cloud.
 
 ## One-liner (for headers)
 
@@ -35,8 +36,11 @@ Always 7 words. Always a period after "once". Always present-tense verbs.
 ## Tweet pitch
 
 > cloudless — write your agent once, ship to AWS Bedrock AgentCore or GCP
-> Vertex AI without rewriting. LangGraph, Strands, ADK. Multi-modal, HITL,
-> 10 multi-agent patterns. 504 tests passing across both clouds. Apache 2.0.
+> Vertex AI without rewriting. **5 frameworks × 2 clouds = 10 cells**:
+> LangGraph, Strands, Google ADK, Anthropic Claude Agent SDK, Microsoft
+> Agent Framework — each running on both clouds. cloudless ships the
+> cross-cloud bridges (no LiteLLM, no shims). Multi-modal, HITL, 10
+> multi-agent patterns. 543 tests passing. Apache 2.0.
 >
 > github.com/nbalawat/cloudless-framework
 
@@ -50,12 +54,14 @@ Vertex AI Agent Engine. Pick the cloud at `cloudless deploy` time.
 ### Real cloud, not mocks
 
 Every primitive — LLM, Memory, Sandbox, Tools, A2A, Vector — has a real-cloud
-integration test. 504 passing tests; zero skipped. We test what we ship.
+integration test. 537 passing tests; zero skipped. We test what we ship.
 
-### Frameworks, your choice
+### Five frameworks × two clouds, all native
 
-Bring LangGraph, Strands Agents, or Google ADK. cloudless adapts each to
-the cloud's deployment model so framework-specific code stays untouched.
+LangGraph, Strands Agents, Google ADK, Anthropic Claude Agent SDK, or Microsoft
+Agent Framework — each works on both AWS Bedrock and GCP Vertex AI. Where the
+framework's first-party SDK ships only one cloud, cloudless ships a native
+bridge (no LiteLLM, no OpenAI shim). Every cell real-cloud validated.
 
 ### Multi-modal in, multi-modal out
 
@@ -99,7 +105,8 @@ datastore resource name to ground against your own corpus.
 > **Write your agent once. Ship it to any cloud.**
 
 A Python framework for agents that ship to AWS Bedrock AgentCore and GCP
-Vertex AI Agent Engine — unchanged. Bring LangGraph, Strands, or ADK.
+Vertex AI Agent Engine — unchanged. Bring LangGraph, Strands, Google ADK,
+Anthropic Claude Agent SDK, or Microsoft Agent Framework.
 
 [Install](#install) · [Quickstart](#quickstart) · [Docs](https://cloudless.dev) · [Examples](./examples)
 ```

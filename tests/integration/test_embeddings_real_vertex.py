@@ -9,7 +9,6 @@ import pytest
 
 import cloudless
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -47,7 +46,7 @@ async def test_vertex_embeddings_semantic_similarity():
     ])
 
     def cosine(a: list[float], b: list[float]) -> float:
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         na = math.sqrt(sum(x * x for x in a))
         nb = math.sqrt(sum(y * y for y in b))
         return dot / (na * nb)

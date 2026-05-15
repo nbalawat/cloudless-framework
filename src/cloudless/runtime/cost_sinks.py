@@ -13,7 +13,7 @@ import json
 import os
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -33,11 +33,11 @@ class CostRecord:
     usd: float = 0.0
     """Computed USD cost. 0.0 for peer calls unless the peer reported it."""
 
-    session_id: Optional[str] = None
-    agent_name: Optional[str] = None
-    team: Optional[str] = None
-    project: Optional[str] = None
-    feature: Optional[str] = None
+    session_id: str | None = None
+    agent_name: str | None = None
+    team: str | None = None
+    project: str | None = None
+    feature: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> str:
@@ -102,12 +102,12 @@ def emit_cost(
     cached_tokens: int = 0,
     reasoning_tokens: int = 0,
     usd: float = 0.0,
-    session_id: Optional[str] = None,
-    agent_name: Optional[str] = None,
-    team: Optional[str] = None,
-    project: Optional[str] = None,
-    feature: Optional[str] = None,
-    extra: Optional[dict[str, Any]] = None,
+    session_id: str | None = None,
+    agent_name: str | None = None,
+    team: str | None = None,
+    project: str | None = None,
+    feature: str | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> CostRecord:
     """Write a cost record to every configured sink."""
     record = CostRecord(
@@ -129,6 +129,6 @@ def emit_cost(
     for sink in _SINKS:
         try:
             sink.write(record)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     return record

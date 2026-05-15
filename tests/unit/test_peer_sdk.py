@@ -16,10 +16,8 @@ from cloudless.runtime.context import InMemoryContext
 from cloudless.runtime.manifest import Manifest, PeerEntry
 from cloudless.runtime.peer import (
     A2APeerClient,
-    CognitoIdentity,
     build_peer_client,
 )
-
 
 pytestmark = [pytest.mark.asyncio]
 

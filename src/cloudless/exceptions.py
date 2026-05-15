@@ -10,8 +10,6 @@ a Retry-After header) to propagate cleanly through the framework.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 
 class CloudlessError(Exception):
     """Base for every framework-raised error.
@@ -24,9 +22,9 @@ class CloudlessError(Exception):
     """
 
     recoverable: bool = False
-    retry_after: Optional[float] = None
+    retry_after: float | None = None
 
-    def __init__(self, message: str = "", *, retry_after: Optional[float] = None) -> None:
+    def __init__(self, message: str = "", *, retry_after: float | None = None) -> None:
         super().__init__(message)
         if retry_after is not None:
             self.retry_after = retry_after
@@ -43,7 +41,7 @@ class TransientError(CloudlessError):
     recoverable = True
 
 
-class TimeoutError(TransientError):  # noqa: A001 (shadow builtin intentionally)
+class TimeoutError(TransientError):
     """The service call exceeded its configured timeout."""
 
 

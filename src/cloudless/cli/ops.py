@@ -7,8 +7,7 @@ the same kebab→snake conversion the deploy adapter does) in the AWS account.
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from rich.console import Console
 from rich.table import Table
@@ -21,7 +20,7 @@ def _to_runtime_name(agent_name: str) -> str:
     return agent_name.replace("-", "_")
 
 
-def _find_runtime(client, agent_name: str) -> Optional[dict]:
+def _find_runtime(client, agent_name: str) -> dict | None:
     """Look up the AgentCore runtime metadata for an agent name."""
     runtime_name = _to_runtime_name(agent_name)
     for r in client.list_agent_runtimes()["agentRuntimes"]:
@@ -63,7 +62,7 @@ def versions_command(*, agent_name: str, region: str = "us-east-1") -> int:
                 str(v.get("createdAt", "?"))[:19],
                 (v.get("description") or "")[:60],
             )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         versions_table.add_row("[red]error[/]", "", str(e)[:80])
 
     endpoints_table = Table(title="Endpoints (aliases)")
@@ -78,7 +77,7 @@ def versions_command(*, agent_name: str, region: str = "us-east-1") -> int:
                 str(ep.get("agentRuntimeVersion") or ep.get("liveVersion") or "?"),
                 ep.get("status", "?"),
             )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         endpoints_table.add_row("[red]error[/]", "", str(e)[:80])
 
     _console.print(versions_table)
@@ -92,7 +91,7 @@ def versions_command(*, agent_name: str, region: str = "us-east-1") -> int:
 
 
 def rollback_command(
-    *, agent_name: str, to_version: Optional[str] = None,
+    *, agent_name: str, to_version: str | None = None,
     endpoint: str = "DEFAULT", region: str = "us-east-1",
 ) -> int:
     """`cloudless rollback <agent> [--to vN]` — swap endpoint alias to a prior version.
@@ -132,7 +131,7 @@ def rollback_command(
             endpointName=endpoint,
             agentRuntimeVersion=target,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[red]✗ rollback failed:[/] {e}")
         return 2
 
@@ -148,9 +147,9 @@ def rollback_command(
 def logs_command(
     *, agent_name: str, region: str = "us-east-1",
     since: str = "10m", follow: bool = False, endpoint: str = "DEFAULT",
-    trace_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    level: Optional[str] = None,
+    trace_id: str | None = None,
+    session_id: str | None = None,
+    level: str | None = None,
     output: str = "text",
 ) -> int:
     """`cloudless logs <agent> [--follow] [--since 1h] [--trace-id X] [--session-id Y] [--level WARN] [--json]`
@@ -172,7 +171,7 @@ def logs_command(
     rid = rt["agentRuntimeId"]
 
     log_group = f"/aws/bedrock-agentcore/runtimes/{rid}-{endpoint}"
-    start_ts_ms = int((datetime.now(timezone.utc) - _parse_since(since)).timestamp() * 1000)
+    start_ts_ms = int((datetime.now(UTC) - _parse_since(since)).timestamp() * 1000)
 
     if output == "text":
         _console.print(f"[bold]cloudless logs[/]  {log_group}  since={since}  "
@@ -193,7 +192,7 @@ def logs_command(
                 return 0
             time.sleep(3)
             continue
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _console.print(f"[red]✗ logs error:[/] {e}")
             return 2
 
@@ -217,12 +216,12 @@ _LEVEL_RANK = {
 }
 
 
-def _emit_event(ev: dict, *, trace_id: Optional[str], session_id: Optional[str],
-                level: Optional[str], output: str) -> None:
+def _emit_event(ev: dict, *, trace_id: str | None, session_id: str | None,
+                level: str | None, output: str) -> None:
     """Apply filters and print one log event."""
     import json as _json
     raw = ev["message"].rstrip()
-    parsed: Optional[dict] = None
+    parsed: dict | None = None
     try:
         parsed = _json.loads(raw)
     except (ValueError, TypeError):
@@ -250,7 +249,7 @@ def _emit_event(ev: dict, *, trace_id: Optional[str], session_id: Optional[str],
             }, separators=(",", ":")))
         return
 
-    ts = datetime.fromtimestamp(ev["timestamp"] / 1000, tz=timezone.utc)
+    ts = datetime.fromtimestamp(ev["timestamp"] / 1000, tz=UTC)
     print(f"{ts.isoformat()}  {raw}")
 
 

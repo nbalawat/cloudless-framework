@@ -20,16 +20,14 @@ import importlib.metadata as md
 import json
 import shutil
 import subprocess
-import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from rich.console import Console
 
 from cloudless._version import __version__
-
 
 _console = Console()
 
@@ -67,7 +65,7 @@ def generate_sbom() -> dict[str, Any]:
     for dist in md.distributions():
         try:
             comp = _component(dist)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         if comp["name"] in seen:
             continue
@@ -82,7 +80,7 @@ def generate_sbom() -> dict[str, Any]:
         "serialNumber": f"urn:uuid:{uuid.uuid4()}",
         "version": 1,
         "metadata": {
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
             "tools": [{
                 "vendor": "cloudless",
                 "name": "cloudless-security",

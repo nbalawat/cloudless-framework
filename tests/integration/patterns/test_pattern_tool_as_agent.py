@@ -12,9 +12,14 @@ This verifies:
 """
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pytest
+from tests.integration.patterns._harness import (
+    complete_pause,
+    drain,
+    find_pause,
+)
 
 import cloudless
 from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
@@ -22,15 +27,6 @@ from cloudless.exceptions import PolicyViolation
 from cloudless.runtime.audit import InMemorySink, reset_sinks, set_sinks
 from cloudless.runtime.policy import get_registry
 from cloudless.runtime.tasks import pause, reset_store
-
-from tests.integration.patterns._harness import (
-    aws_available,
-    complete_pause,
-    drain,
-    fast_llm,
-    find_pause,
-)
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 

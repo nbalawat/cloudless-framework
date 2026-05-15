@@ -10,7 +10,6 @@ Cost: ~$0.0001 (Bedrock Nova Micro inference). Time: ~12s (boot + invoke).
 """
 from __future__ import annotations
 
-import json
 import os
 import socket
 import subprocess
@@ -20,9 +19,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
-import cloudless
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -39,7 +35,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -78,7 +74,7 @@ async def test_cloudless_dev_serves_real_bedrock_agent(aws_available, tmp_path_f
                 r = httpx.get(url_ping, timeout=1.0)
                 if r.status_code == 200:
                     break
-            except Exception:  # noqa: BLE001
+            except Exception:
                 time.sleep(0.3)
         else:
             # Server never came up — dump output to help diagnose

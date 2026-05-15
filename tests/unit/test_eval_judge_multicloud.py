@@ -29,7 +29,6 @@ def test_judge_default_threshold():
 async def test_judge_dispatches_to_gemini_provider(monkeypatch):
     """When model is a gemini alias, the LLM should be built with project= passed."""
     seen_kwargs: dict = {}
-    real_llm_init = None
 
     class _FakeLLM:
         def __init__(self, **kw):
@@ -40,7 +39,6 @@ async def test_judge_dispatches_to_gemini_provider(monkeypatch):
     import cloudless
     monkeypatch.setattr(cloudless, "LLM", _FakeLLM)
 
-    from cloudless.eval import EvalDataset
     from cloudless.eval.runner import EvalCase
 
     case = EvalCase(id="1", prompt="hi", expected_contains="x", expected_regex=None)

@@ -9,10 +9,50 @@ without diving into submodules.
 from __future__ import annotations
 
 from cloudless._version import __version__
+
+# Framework adapter bases — re-exported for ergonomic use:
+#   `class X(cloudless.LangGraphAgent)` rather than
+#   `from cloudless.adapters.frameworks.langgraph import LangGraphAgent`.
+# Each is None if the corresponding optional extra isn't installed.
+from cloudless.adapters.frameworks import (
+    ADKAgent,
+    ClaudeAgentSDKAgent,
+    ClaudeSDKAgent,
+    LangGraphAgent,
+    MAFAgent,
+    StrandsAgent,
+)
 from cloudless.agent import (
     Agent,
     AgentMetadata,
     agent,
+)
+from cloudless.catalog import (
+    LLM,
+    EmbeddingAlias,
+    Embeddings,
+    EmbeddingsBackend,
+    InMemoryBackend,
+    InMemoryVectorBackend,
+    LocalFileBackend,
+    LocalSubprocessBackend,
+    Memory,
+    MemoryBackend,
+    MemoryEvent,
+    MemoryRecord,
+    ModelAlias,
+    Sandbox,
+    SandboxBackend,
+    SandboxResult,
+    Secrets,
+    SecretsBackend,
+    Tool,
+    VectorMatch,
+    VectorStore,
+    VectorStoreBackend,
+    resolve_embedding,
+    resolve_model,
+    tool,
 )
 from cloudless.chunks import (
     Chunk,
@@ -40,9 +80,9 @@ from cloudless.exceptions import (
     TransientError,
 )
 from cloudless.runtime import (
+    CircuitBreaker,
     Context,
     InMemoryContext,
-    CircuitBreaker,
     get_breaker,
     get_policy_registry,
     policy,
@@ -50,41 +90,8 @@ from cloudless.runtime import (
     with_retry,
     with_timeout,
 )
-from cloudless.catalog import (
-    LLM,
-    InMemoryBackend,
-    LocalFileBackend,
-    Embeddings,
-    EmbeddingsBackend,
-    EmbeddingAlias,
-    resolve_embedding,
-    VectorStore,
-    VectorStoreBackend,
-    VectorMatch,
-    InMemoryVectorBackend,
-    LocalSubprocessBackend,
-    Memory,
-    MemoryBackend,
-    MemoryEvent,
-    MemoryRecord,
-    ModelAlias,
-    Sandbox,
-    SandboxBackend,
-    SandboxResult,
-    Secrets,
-    SecretsBackend,
-    Tool,
-    tool,
-    resolve_model,
-)
 
-# Framework adapter bases — re-exported for ergonomic use:
-#   `class X(cloudless.LangGraphAgent)` rather than
-#   `from cloudless.adapters.frameworks.langgraph import LangGraphAgent`.
-# Each is None if the corresponding optional extra isn't installed.
-from cloudless.adapters.frameworks import LangGraphAgent, StrandsAgent
-
-__all__ = [
+__all__ = [  # noqa: RUF022 — grouped by concern (Agent / Chunks / Runtime / Catalog / Exceptions) for readability over alphabetical sort
     "__version__",
     # Agent surface
     "Agent",
@@ -113,6 +120,10 @@ __all__ = [
     # Framework adapters
     "LangGraphAgent",
     "StrandsAgent",
+    "ADKAgent",
+    "ClaudeAgentSDKAgent",
+    "ClaudeSDKAgent",
+    "MAFAgent",
     # Service catalog (Q9)
     "LLM",
     "ModelAlias",

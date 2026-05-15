@@ -1,16 +1,10 @@
 """Tests for cloudless.runtime.context — the per-invocation Context Protocol."""
 from __future__ import annotations
 
-import pytest
-
 import cloudless
 from cloudless.runtime import (
     Context,
-    CostTracker,
     InMemoryContext,
-    PeerClient,
-    Session,
-    User,
 )
 
 

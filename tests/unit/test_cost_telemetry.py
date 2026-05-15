@@ -6,7 +6,6 @@ import pytest
 from cloudless.runtime.context import InMemoryContext
 from cloudless.runtime.pricing import DEFAULT_PRICES, estimate_cost_usd
 
-
 pytestmark = [pytest.mark.asyncio]
 
 

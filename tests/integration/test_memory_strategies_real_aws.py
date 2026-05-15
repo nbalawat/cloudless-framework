@@ -11,7 +11,6 @@ import uuid
 
 import pytest
 
-
 pytestmark = [pytest.mark.integration]
 
 
@@ -21,7 +20,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("AWS credentials not configured")
         return False
 
@@ -29,16 +28,16 @@ def aws_available() -> bool:
 def _cleanup_memory(client, memory_id: str) -> None:
     try:
         client.delete_memory(memoryId=memory_id)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 
 def test_provision_user_preference_strategy(aws_available):
     """USER_PREFERENCE strategy provisions via cloudless.adapters.aws.memory_provision."""
     import boto3
+
     from cloudless.adapters.aws.memory_provision import (
         ensure_memory_resource,
-        _memory_name,
     )
 
     client = boto3.client("bedrock-agentcore-control", region_name="us-east-1")
@@ -54,9 +53,8 @@ def test_provision_user_preference_strategy(aws_available):
         # Verify it actually exists with the right strategy
         got = client.get_memory(memoryId=memory_id)
         mem = got.get("memory", got)
-        strategies = mem.get("memoryStrategies", mem.get("strategies", []))
-        # The strategy details may be lifted into separate keys; we just
-        # check the memory exists in an OK status
+        # Strategy details may be lifted into separate keys; we just check
+        # the memory exists in an OK status.
         assert mem.get("status") in ("ACTIVE", "CREATING")
     finally:
         if memory_id:
@@ -66,6 +64,7 @@ def test_provision_user_preference_strategy(aws_available):
 def test_provision_summarization_strategy(aws_available):
     """SUMMARIZATION strategy provisions via cloudless.adapters.aws.memory_provision."""
     import boto3
+
     from cloudless.adapters.aws.memory_provision import ensure_memory_resource
 
     client = boto3.client("bedrock-agentcore-control", region_name="us-east-1")

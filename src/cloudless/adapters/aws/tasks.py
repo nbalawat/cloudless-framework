@@ -20,13 +20,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import boto3
 
 from cloudless.runtime.tasks import TaskRecord
-
 
 ACTOR_PREFIX = "cloudless-tasks"
 
@@ -72,7 +71,7 @@ class AgentCoreTaskStore:
             memoryId=self.memory_id,
             actorId=self._actor_id(record.agent_name),
             sessionId=record.session_id,
-            eventTimestamp=datetime.now(timezone.utc),
+            eventTimestamp=datetime.now(UTC),
             payload=[
                 {
                     "blob": self._encode(record),
@@ -80,13 +79,12 @@ class AgentCoreTaskStore:
             ],
         )
 
-    def get(self, resume_token: str) -> Optional[TaskRecord]:
+    def get(self, resume_token: str) -> TaskRecord | None:
         # Scan all events under cloudless-tasks across all agents for this token.
         # In practice, callers know the agent_name so this is O(events for that agent).
         # Walk all actors under our prefix.
         # For the general case, we keep it simple: caller can use `get_with_agent`
         # for an indexed lookup.
-        paginator = self._client.get_paginator("list_events")
         # ListEvents needs an actorId; the caller must use get_with_agent for AC
         # since we can't list across actors. Default to scanning recent events
         # via a known agent — exposed as a separate API for now.
@@ -95,11 +93,11 @@ class AgentCoreTaskStore:
             "use get_with_agent(token, agent_name) instead."
         )
 
-    def get_with_agent(self, resume_token: str, agent_name: str) -> Optional[TaskRecord]:
+    def get_with_agent(self, resume_token: str, agent_name: str) -> TaskRecord | None:
         """AC-specific helper — caller passes the agent_name so we can scope ListEvents."""
         actor_id = self._actor_id(agent_name)
         paginator = self._client.get_paginator("list_events")
-        latest: Optional[TaskRecord] = None
+        latest: TaskRecord | None = None
         for page in paginator.paginate(memoryId=self.memory_id, actorId=actor_id):
             for ev in page.get("events", []):
                 for payload in ev.get("payload", []):
@@ -108,13 +106,13 @@ class AgentCoreTaskStore:
                         continue
                     try:
                         rec = self._decode(blob)
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         continue
                     if rec.resume_token == resume_token:
                         latest = rec  # Keep walking — later events may overwrite (resolve)
         return latest
 
-    def resolve(self, resume_token: str, approval: dict) -> Optional[TaskRecord]:
+    def resolve(self, resume_token: str, approval: dict) -> TaskRecord | None:
         # Caller must use resolve_with_agent for AC scoping
         raise NotImplementedError(
             "AgentCoreTaskStore.resolve requires the agent_name; "
@@ -123,7 +121,7 @@ class AgentCoreTaskStore:
 
     def resolve_with_agent(
         self, resume_token: str, approval: dict, agent_name: str,
-    ) -> Optional[TaskRecord]:
+    ) -> TaskRecord | None:
         rec = self.get_with_agent(resume_token, agent_name)
         if rec is None or rec.resolved:
             return None
@@ -160,7 +158,7 @@ class AgentCoreTaskStore:
                         continue
                     try:
                         rec = self._decode(blob)
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         continue
                     records[rec.resume_token] = rec
         now = _t.time()

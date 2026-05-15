@@ -5,11 +5,12 @@ import asyncio
 
 import pytest
 
-import cloudless
 from cloudless.exceptions import (
     CircuitOpen,
     InvalidInputError,
     ThrottledError,
+)
+from cloudless.exceptions import (
     TimeoutError as CloudlessTimeoutError,
 )
 from cloudless.runtime.resilience import (
@@ -20,7 +21,6 @@ from cloudless.runtime.resilience import (
     with_retry,
     with_timeout,
 )
-
 
 pytestmark = [pytest.mark.asyncio]
 

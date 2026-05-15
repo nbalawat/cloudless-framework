@@ -1,17 +1,11 @@
 """Unit tests for cloudless.runtime.logging + manifest (Q39, Q12)."""
 from __future__ import annotations
 
-import io
 import json
-import sys
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from cloudless.runtime import (
-    Manifest,
-    PeerEntry,
     add_redact_pattern,
     bind_invocation,
     clear_invocation,

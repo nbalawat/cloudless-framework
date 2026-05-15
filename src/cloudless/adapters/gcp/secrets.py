@@ -1,8 +1,6 @@
 """GCP Secret Manager backend for cloudless.Secrets."""
 from __future__ import annotations
 
-from typing import Optional
-
 from google.api_core.exceptions import GoogleAPICallError, NotFound
 from google.cloud import secretmanager_v1
 
@@ -22,7 +20,7 @@ class SecretManagerBackend:
         self.prefix = prefix
         self._client = secretmanager_v1.SecretManagerServiceClient()
 
-    async def get(self, name: str) -> Optional[str]:
+    async def get(self, name: str) -> str | None:
         full = f"projects/{self.project}/secrets/{self.prefix}{name}/versions/latest"
         try:
             resp = self._client.access_secret_version(name=full)
@@ -49,7 +47,9 @@ class SecretManagerBackend:
     @staticmethod
     def _translate(e: GoogleAPICallError) -> Exception:
         from cloudless.exceptions import (
-            AuthenticationError, InvalidInputError, ThrottledError,
+            AuthenticationError,
+            InvalidInputError,
+            ThrottledError,
         )
         status = getattr(e, "grpc_status_code", None) or getattr(e, "code", lambda: 0)()
         if status == 429:

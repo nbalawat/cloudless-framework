@@ -39,14 +39,18 @@ def test_pause_chunk_round_trips():
     assert c.resume_token == "tok-1"
 
     # Should be in the Chunk union
-    from cloudless.chunks import Chunk
     import typing
+
+    from cloudless.chunks import Chunk
     assert PauseChunk in typing.get_args(Chunk)
 
 
 def test_pause_chunk_is_immutable():
+    from pydantic import ValidationError
+
     c = PauseChunk(resume_token="tok-1")
-    with pytest.raises(Exception):
+    # Pydantic v2 frozen models raise ValidationError on attempted mutation.
+    with pytest.raises(ValidationError):
         c.resume_token = "other"
 
 
@@ -114,6 +118,7 @@ def test_list_active_tasks_excludes_resolved():
 
 def test_public_imports():
     assert hasattr(cloudless, "PauseChunk")
-    from cloudless.runtime import pause as r_pause, resume as r_resume
+    from cloudless.runtime import pause as r_pause
+    from cloudless.runtime import resume as r_resume
     assert callable(r_pause)
     assert callable(r_resume)

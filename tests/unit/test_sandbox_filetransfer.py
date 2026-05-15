@@ -5,7 +5,6 @@ import pytest
 
 import cloudless
 
-
 pytestmark = [pytest.mark.asyncio]
 
 

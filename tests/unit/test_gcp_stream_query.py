@@ -1,8 +1,6 @@
 """Verify _CloudlessGCPAgent exposes stream_query() and register_operations()."""
 from __future__ import annotations
 
-import pytest
-
 
 def test_stream_query_exists_on_wrapper():
     from cloudless.adapters.gcp.agent_runtime import _CloudlessGCPAgent

@@ -63,7 +63,6 @@ def test_ensure_gateway_creates_when_missing():
 
 def test_ensure_gateway_rejects_custom_jwt_without_cognito_config():
     """CUSTOM_JWT authorizer requires Cognito config; raises if missing."""
-    import pytest
     client = _FakeControl()
     with pytest.raises(RuntimeError, match="cognito"):
         ensure_gateway(name="my-gw", role_arn="arn:aws:iam::123:role/x", client=client)
@@ -107,8 +106,9 @@ def test_ensure_target_creates_when_missing():
 
 
 def test_ensure_openapi_target_creates_when_missing():
-    from cloudless.adapters.aws.gateway import ensure_openapi_target
     import json as _json
+
+    from cloudless.adapters.aws.gateway import ensure_openapi_target
 
     class _FakeOpenAPIControl(_FakeControl):
         def list_gateway_targets(self, *, gatewayIdentifier):

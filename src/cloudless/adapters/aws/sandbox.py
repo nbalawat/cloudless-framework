@@ -10,9 +10,7 @@ Per dossier 02: 2 vCPU / 8 GB / 10 GB disk per session; 8h max async; 100 MB pay
 """
 from __future__ import annotations
 
-import json
 import threading
-from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -34,7 +32,7 @@ class CodeInterpreterBackend:
         self.session_idle_timeout_s = session_idle_timeout_s
         # Two clients: data plane for invoke, control plane for start/stop
         self._data = boto3.client("bedrock-agentcore", region_name=region)
-        self._session_id: Optional[str] = None
+        self._session_id: str | None = None
         self._lock = threading.Lock()
 
     def _ensure_session(self) -> str:
@@ -107,7 +105,11 @@ class CodeInterpreterBackend:
     @staticmethod
     def _translate(e: ClientError) -> Exception:
         from cloudless.exceptions import (
-            AuthenticationError, InvalidInputError, ThrottledError,
+            AuthenticationError,
+            InvalidInputError,
+            ThrottledError,
+        )
+        from cloudless.exceptions import (
             TimeoutError as CloudlessTimeoutError,
         )
         code = e.response.get("Error", {}).get("Code", "")

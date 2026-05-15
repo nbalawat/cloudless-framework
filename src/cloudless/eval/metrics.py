@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Optional, Protocol
+from typing import Any, Protocol
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class ContainsSubstring:
 class RegexMatch:
     name = "regex_match"
 
-    def __init__(self, *, pattern: Optional[str] = None) -> None:
+    def __init__(self, *, pattern: str | None = None) -> None:
         self.pattern_override = pattern
 
     async def evaluate(self, *, case, response: str) -> MetricScore:
@@ -130,7 +130,7 @@ class LLMJudge:
             data = json.loads(stripped)
             score = float(data.get("score", 0.0))
             reason = data.get("reason", "")[:200]
-        except Exception:  # noqa: BLE001
+        except Exception:
             return MetricScore(name=self.name, score=0.0, passed=False,
                                 detail=f"could not parse judge output: {raw[:120]!r}")
         passed = score >= self.pass_threshold

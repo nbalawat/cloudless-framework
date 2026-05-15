@@ -46,7 +46,9 @@ class BedrockEmbeddingsBackend:
     @staticmethod
     def _translate(e: ClientError) -> Exception:
         from cloudless.exceptions import (
-            AuthenticationError, InvalidInputError, ThrottledError,
+            AuthenticationError,
+            InvalidInputError,
+            ThrottledError,
         )
         code = e.response.get("Error", {}).get("Code", "")
         if code == "ThrottlingException":

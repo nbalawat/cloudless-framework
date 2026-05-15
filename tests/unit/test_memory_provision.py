@@ -1,17 +1,18 @@
 """Unit tests for deploy-time Memory auto-provisioning."""
 from __future__ import annotations
 
-import pytest
-
 from cloudless.adapters.aws.memory_provision import (
     _memory_name as aws_memory_name,
+)
+from cloudless.adapters.aws.memory_provision import (
     ensure_memory_resource as ensure_aws,
 )
 from cloudless.adapters.gcp.memory_provision import (
     _engine_display_name as gcp_engine_name,
+)
+from cloudless.adapters.gcp.memory_provision import (
     ensure_agent_engine as ensure_gcp,
 )
-
 
 # --------------------------------------------------------------------- #
 # AWS

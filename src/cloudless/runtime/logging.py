@@ -19,13 +19,12 @@ from __future__ import annotations
 import re
 import sys
 from contextvars import ContextVar
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 
-
 # ContextVar-backed context that auto-injects on every log call.
-_invocation_ctx: ContextVar[dict] = ContextVar("cloudless_invocation_ctx", default={})
+_invocation_ctx: ContextVar[dict] = ContextVar("cloudless_invocation_ctx", default={})  # noqa: B039 — read-only snapshot inside structlog processors; never mutated in place
 
 
 # --------------------------------------------------------------------- #
@@ -93,15 +92,15 @@ def _inject_context_processor(_logger, _name, event_dict: dict) -> dict:
 
 def bind_invocation(
     *,
-    agent_name: Optional[str] = None,
-    agent_version: Optional[str] = None,
-    agent_framework: Optional[str] = None,
-    cloud: Optional[str] = None,
-    region: Optional[str] = None,
-    run_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    trace_id: Optional[str] = None,
-    span_id: Optional[str] = None,
+    agent_name: str | None = None,
+    agent_version: str | None = None,
+    agent_framework: str | None = None,
+    cloud: str | None = None,
+    region: str | None = None,
+    run_id: str | None = None,
+    session_id: str | None = None,
+    trace_id: str | None = None,
+    span_id: str | None = None,
 ) -> None:
     """Bind Q39 required fields for the duration of this invocation."""
     fields = {

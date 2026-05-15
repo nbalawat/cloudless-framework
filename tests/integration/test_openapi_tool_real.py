@@ -15,7 +15,6 @@ import uvicorn
 
 import cloudless
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -26,7 +25,7 @@ def _free_port() -> int:
 
 
 try:
-    from pydantic import BaseModel as _BaseModel  # noqa: F401
+    from pydantic import BaseModel as _BaseModel
 
     class _GreetBody(_BaseModel):
         name: str
@@ -80,7 +79,7 @@ def openapi_server():
             r = httpx.get(f"http://127.0.0.1:{port}/openapi.json", timeout=0.5)
             if r.status_code == 200:
                 break
-        except Exception:  # noqa: BLE001
+        except Exception:
             time.sleep(0.1)
     yield f"http://127.0.0.1:{port}"
     server.should_exit = True

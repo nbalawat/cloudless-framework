@@ -14,17 +14,16 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass(frozen=True)
 class PeerEntry:
     name: str
     cloud: str
-    http_url: Optional[str] = None
-    a2a_url: Optional[str] = None
-    idp_issuer: Optional[str] = None
-    audience: Optional[str] = None
+    http_url: str | None = None
+    a2a_url: str | None = None
+    idp_issuer: str | None = None
+    audience: str | None = None
     residency: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -33,7 +32,7 @@ class Manifest:
     project: str
     agents: dict[str, PeerEntry]
 
-    def get(self, name: str) -> Optional[PeerEntry]:
+    def get(self, name: str) -> PeerEntry | None:
         return self.agents.get(name)
 
 
@@ -53,9 +52,9 @@ def _parse_manifest_dict(contents: dict) -> Manifest:
 
 
 def load_manifest(
-    path: Optional[Path | str] = None,
+    path: Path | str | None = None,
     *,
-    contents: Optional[dict] = None,
+    contents: dict | None = None,
 ) -> Manifest:
     """Load a manifest from disk (or accept already-parsed dict for tests).
 
@@ -104,8 +103,8 @@ class ManifestRefresher:
         self,
         *,
         interval_seconds: float = 300.0,
-        url: Optional[str] = None,
-        path: Optional[str | Path] = None,
+        url: str | None = None,
+        path: str | Path | None = None,
     ) -> None:
         import threading
         self._interval = interval_seconds
@@ -114,7 +113,7 @@ class ManifestRefresher:
         self._current: Manifest = self._fetch_once()
         self._lock = threading.Lock()
         self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
     def _fetch_once(self) -> Manifest:
         if self._url:

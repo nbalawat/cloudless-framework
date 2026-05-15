@@ -22,7 +22,7 @@ import json
 import os
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Protocol, runtime_checkable
 
 
 @dataclass(frozen=True)
@@ -46,13 +46,13 @@ class AuditRecord:
     payload_hash: str = ""
     """SHA-256 prefix of the payload that triggered the decision. Empty for allow."""
 
-    agent_name: Optional[str] = None
+    agent_name: str | None = None
     """Bound from invocation context if available."""
 
-    session_id: Optional[str] = None
+    session_id: str | None = None
     """Bound from invocation context if available."""
 
-    user_id: Optional[str] = None
+    user_id: str | None = None
     """Bound from invocation context if available."""
 
     extra: dict[str, Any] = field(default_factory=dict)
@@ -75,9 +75,6 @@ def hash_payload(payload: Any) -> str:
 # --------------------------------------------------------------------- #
 # Sinks
 # --------------------------------------------------------------------- #
-
-
-from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -170,7 +167,7 @@ def emit_audit(
     policy_name: str,
     reason: str = "",
     payload: Any = None,
-    extra: Optional[dict[str, Any]] = None,
+    extra: dict[str, Any] | None = None,
 ) -> AuditRecord:
     """Write an audit record to every configured sink.
 
@@ -196,7 +193,7 @@ def emit_audit(
     for sink in _SINKS:
         try:
             sink.write(record)
-        except Exception:  # noqa: BLE001
+        except Exception:
             # Never let a broken sink crash the request path.
             pass
     return record

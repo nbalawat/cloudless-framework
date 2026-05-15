@@ -19,7 +19,7 @@ from __future__ import annotations
 import secrets
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 
 @dataclass
@@ -29,7 +29,7 @@ class TaskRecord:
     agent_name: str
     session_id: str
     reason: str
-    pending_action: Optional[dict] = None
+    pending_action: dict | None = None
     created_at: float = field(default_factory=time.time)
     expires_at: float = field(default_factory=lambda: time.time() + 86400)
     """Default TTL: 24h."""
@@ -37,15 +37,15 @@ class TaskRecord:
     """Arbitrary agent-supplied state. The runtime echoes it back on resume."""
     resolved: bool = False
     """Set to True when resume() succeeds; prevents double-resume."""
-    approval: Optional[dict] = None
+    approval: dict | None = None
     """Populated by resume() with the human's decision."""
 
 
 class TaskStore(Protocol):
     """Sync store contract — runtime adapters supply concrete backends."""
     def put(self, record: TaskRecord) -> None: ...
-    def get(self, resume_token: str) -> Optional[TaskRecord]: ...
-    def resolve(self, resume_token: str, approval: dict) -> Optional[TaskRecord]: ...
+    def get(self, resume_token: str) -> TaskRecord | None: ...
+    def resolve(self, resume_token: str, approval: dict) -> TaskRecord | None: ...
     def delete(self, resume_token: str) -> None: ...
     def list_active(self) -> list[TaskRecord]: ...
 
@@ -59,7 +59,7 @@ class InMemoryTaskStore:
     def put(self, record: TaskRecord) -> None:
         self._records[record.resume_token] = record
 
-    def get(self, resume_token: str) -> Optional[TaskRecord]:
+    def get(self, resume_token: str) -> TaskRecord | None:
         rec = self._records.get(resume_token)
         if rec is None:
             return None
@@ -68,7 +68,7 @@ class InMemoryTaskStore:
             return None
         return rec
 
-    def resolve(self, resume_token: str, approval: dict) -> Optional[TaskRecord]:
+    def resolve(self, resume_token: str, approval: dict) -> TaskRecord | None:
         rec = self.get(resume_token)
         if rec is None:
             return None
@@ -126,8 +126,8 @@ def pause(
     agent_name: str,
     session_id: str,
     reason: str = "",
-    pending_action: Optional[dict] = None,
-    state: Optional[dict] = None,
+    pending_action: dict | None = None,
+    state: dict | None = None,
     ttl_seconds: float = 86400.0,
 ) -> TaskRecord:
     """Helper for agents to create a paused task.
@@ -163,7 +163,7 @@ def pause(
     return rec
 
 
-def resume(resume_token: str, approval: dict) -> Optional[TaskRecord]:
+def resume(resume_token: str, approval: dict) -> TaskRecord | None:
     """Mark a paused task as resolved. Returns the record, or None if expired/unknown.
 
     The actual agent re-invocation is the runtime's job — this function only
@@ -174,7 +174,7 @@ def resume(resume_token: str, approval: dict) -> Optional[TaskRecord]:
     return _STORE.resolve(resume_token, approval)
 
 
-def get_task(resume_token: str) -> Optional[TaskRecord]:
+def get_task(resume_token: str) -> TaskRecord | None:
     return _STORE.get(resume_token)
 
 

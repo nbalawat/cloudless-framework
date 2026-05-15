@@ -33,11 +33,11 @@ Usage:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from typing import Any
 
 from cloudless.exceptions import GuardrailBlocked, PolicyViolation
-
 
 VALID_STAGES = frozenset({
     "before_llm",
@@ -126,7 +126,7 @@ class PolicyRegistry:
                     payload=primary,
                 )
                 raise
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 emit_audit(
                     stage=stage,
                     decision="block",

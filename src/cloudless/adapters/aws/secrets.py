@@ -1,9 +1,6 @@
 """AWS Secrets Manager backend for cloudless.Secrets."""
 from __future__ import annotations
 
-import json
-from typing import Optional
-
 import boto3
 from botocore.exceptions import ClientError
 
@@ -26,7 +23,7 @@ class SecretsManagerBackend:
         self.prefix = prefix
         self._client = boto3.client("secretsmanager", region_name=region)
 
-    async def get(self, name: str) -> Optional[str]:
+    async def get(self, name: str) -> str | None:
         try:
             resp = self._client.get_secret_value(SecretId=self.prefix + name)
         except ClientError as e:
@@ -55,7 +52,9 @@ class SecretsManagerBackend:
     @staticmethod
     def _translate(e: ClientError) -> Exception:
         from cloudless.exceptions import (
-            AuthenticationError, InvalidInputError, ThrottledError,
+            AuthenticationError,
+            InvalidInputError,
+            ThrottledError,
         )
         code = e.response.get("Error", {}).get("Code", "")
         if code in ("ThrottlingException",):

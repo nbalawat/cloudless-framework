@@ -97,6 +97,6 @@ def test_none_attributes_are_skipped(otel_exporter):
     with tracing.span("test.none", real="value", missing=None):
         pass
     spans = otel_exporter.get_finished_spans()
-    sp = [s for s in spans if s.name == "test.none"][0]
+    sp = next(s for s in spans if s.name == "test.none")
     assert "real" in sp.attributes
     assert "missing" not in sp.attributes

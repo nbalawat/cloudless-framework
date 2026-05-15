@@ -12,13 +12,13 @@ The `-s` flag prevents pytest from capturing stdout so the results print.
 from __future__ import annotations
 
 import pytest
+from tests.perf.bench import bench_async, bench_sync
 
 import cloudless
 from cloudless.chunks import TextChunk
 from cloudless.runtime.audit import reset_sinks, set_sinks
 from cloudless.runtime.policy import get_registry
 from cloudless.runtime.tasks import pause, reset_store, resume
-from tests.perf.bench import bench_async, bench_sync
 
 
 @pytest.fixture(autouse=True)

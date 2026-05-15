@@ -26,13 +26,12 @@ import hashlib
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterable, Optional
 
 from cloudless.catalog.llm import LLM
 from cloudless.chunks import TextChunk
 
 
-class CassetteMode(str, Enum):
+class CassetteMode(str, Enum):  # noqa: UP042 — public API value-compat with prior 0.0.x; do not switch to StrEnum
     RECORD = "record"
     REPLAY = "replay"
     PASSTHROUGH = "passthrough"
@@ -48,7 +47,7 @@ def set_default_mode(mode: CassetteMode | str) -> None:
     _DEFAULT_MODE = CassetteMode(mode) if isinstance(mode, str) else mode
 
 
-def _key(model: str, system: Optional[str], prompt: str) -> str:
+def _key(model: str, system: str | None, prompt: str) -> str:
     payload = json.dumps({"m": model, "s": system or "", "p": prompt}, sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 

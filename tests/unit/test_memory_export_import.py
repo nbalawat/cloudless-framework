@@ -1,12 +1,9 @@
 """Unit tests for Memory.export_facts + import_facts."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 import pytest
 
 import cloudless
-
 
 pytestmark = [pytest.mark.asyncio]
 

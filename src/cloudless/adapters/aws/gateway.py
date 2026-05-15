@@ -20,7 +20,7 @@ typically want the Gateway pathway for centralized auth/observability.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 def ensure_gateway(
@@ -29,9 +29,9 @@ def ensure_gateway(
     role_arn: str,
     region: str = "us-east-1",
     client: Any = None,
-    description: Optional[str] = None,
-    cognito_discovery_url: Optional[str] = None,
-    cognito_audience: Optional[str] = None,
+    description: str | None = None,
+    cognito_discovery_url: str | None = None,
+    cognito_audience: str | None = None,
     authorizer_type: str = "CUSTOM_JWT",
 ) -> dict:
     """Idempotently create an AgentCore Gateway.
@@ -54,7 +54,7 @@ def ensure_gateway(
                     "url": gw.get("gatewayUrl") or gw.get("invocationUrl"),
                     "name": name,
                 }
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     create_kwargs: dict[str, Any] = {
@@ -77,7 +77,7 @@ def ensure_gateway(
         }
     try:
         resp = client.create_gateway(**create_kwargs)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise RuntimeError(f"Failed to create Gateway {name!r}: {e}") from e
 
     gid = resp.get("gatewayId") or resp.get("id")
@@ -94,7 +94,7 @@ def ensure_openapi_target(
     openapi_spec: dict,
     region: str = "us-east-1",
     client: Any = None,
-    description: Optional[str] = None,
+    description: str | None = None,
 ) -> dict:
     """Idempotently create a Gateway Target backed by an OpenAPI spec.
 
@@ -114,7 +114,7 @@ def ensure_openapi_target(
                     "name": name,
                     "gateway_id": gateway_id,
                 }
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     try:
@@ -134,7 +134,7 @@ def ensure_openapi_target(
                 {"credentialProviderType": "GATEWAY_IAM_ROLE"},
             ],
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise RuntimeError(f"Failed to create OpenAPI Gateway Target {name!r}: {e}") from e
 
     tid = resp.get("targetId") or resp.get("id")
@@ -151,7 +151,7 @@ def ensure_lambda_target(
     input_schema: dict,
     region: str = "us-east-1",
     client: Any = None,
-    description: Optional[str] = None,
+    description: str | None = None,
 ) -> dict:
     """Idempotently create a Gateway Target backed by a Lambda function.
 
@@ -171,7 +171,7 @@ def ensure_lambda_target(
                     "name": name,
                     "gateway_id": gateway_id,
                 }
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     try:
@@ -197,7 +197,7 @@ def ensure_lambda_target(
                 {"credentialProviderType": "GATEWAY_IAM_ROLE"},
             ],
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise RuntimeError(f"Failed to create Gateway Target {name!r}: {e}") from e
 
     tid = resp.get("targetId") or resp.get("id")

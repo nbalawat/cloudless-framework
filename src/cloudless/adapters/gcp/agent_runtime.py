@@ -27,10 +27,10 @@ query() to GCP's request/response API.
 from __future__ import annotations
 
 import sys
-import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -172,7 +172,7 @@ class AgentRuntimeDeployer:
         *,
         project: str,
         location: str = "us-central1",
-        staging_bucket: Optional[str] = None,
+        staging_bucket: str | None = None,
     ) -> None:
         self.project = project
         self.location = location
@@ -194,8 +194,8 @@ class AgentRuntimeDeployer:
         self,
         agent_class: type,
         *,
-        display_name: Optional[str] = None,
-        description: Optional[str] = None,
+        display_name: str | None = None,
+        description: str | None = None,
     ) -> DeploymentResult:
         if not hasattr(agent_class, "__cloudless_metadata__"):
             raise ValueError(
@@ -228,7 +228,7 @@ class AgentRuntimeDeployer:
             try:
                 __import__(mod_name)
                 cloudpickle.register_pickle_by_value(sys.modules[mod_name])
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
         # Wheel fallback for anything not pickled by value (e.g., if the user
@@ -297,6 +297,7 @@ class AgentRuntimeDeployer:
         """
         import subprocess
         import tempfile
+
         import cloudless as cl_module
         cloudless_root = Path(cl_module.__file__).parent.parent.parent
         if not (cloudless_root / "pyproject.toml").is_file():
@@ -325,9 +326,9 @@ def deploy(
     *,
     project: str,
     location: str = "us-central1",
-    staging_bucket: Optional[str] = None,
-    display_name: Optional[str] = None,
-    description: Optional[str] = None,
+    staging_bucket: str | None = None,
+    display_name: str | None = None,
+    description: str | None = None,
 ) -> DeploymentResult:
     """One-shot GCP deploy. Returns DeploymentResult with the reasoningEngine resource."""
     return AgentRuntimeDeployer(

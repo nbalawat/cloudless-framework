@@ -18,26 +18,22 @@ from __future__ import annotations
 import socket
 import threading
 import time
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pytest
 import uvicorn
-from starlette.testclient import TestClient
-
-import cloudless
-from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
-from cloudless.runtime.a2a_server import build_a2a_app
-from cloudless.runtime.manifest import Manifest, PeerEntry
-from cloudless.runtime.peer import A2APeerClient
-from cloudless.runtime.tasks import pause, reset_store
-
 from tests.integration.patterns._harness import (
-    aws_available,
     complete_pause,
     drain,
     find_pause,
 )
 
+import cloudless
+from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
+from cloudless.runtime.a2a_server import build_a2a_app
+from cloudless.runtime.manifest import PeerEntry
+from cloudless.runtime.peer import A2APeerClient
+from cloudless.runtime.tasks import pause, reset_store
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -86,7 +82,7 @@ def orders_server_url():
         try:
             httpx.post(f"http://127.0.0.1:{port}/a2a", json={"jsonrpc": "2.0"}, timeout=0.5)
             break
-        except Exception:  # noqa: BLE001
+        except Exception:
             time.sleep(0.1)
     yield f"http://127.0.0.1:{port}/a2a"
     server.should_exit = True

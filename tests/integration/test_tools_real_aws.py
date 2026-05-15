@@ -14,7 +14,6 @@ import pytest
 
 import cloudless
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -23,7 +22,7 @@ def aws_available() -> bool:
     try:
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -64,7 +63,8 @@ def handler(event, context):
     return {"echoed": event, "from": "cloudless-spike-tool"}
 '''
     # Lambda needs a zip file
-    import zipfile, io
+    import io
+    import zipfile
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("lambda_function.py", code)
@@ -98,7 +98,7 @@ def handler(event, context):
     # Teardown
     try:
         lam.delete_function(FunctionName=name)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
     try:
         iam.detach_role_policy(
@@ -106,7 +106,7 @@ def handler(event, context):
             PolicyArn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
         )
         iam.delete_role(RoleName=role_name)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 

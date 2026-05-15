@@ -18,12 +18,14 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 from cloudless.exceptions import (
     AuthenticationError,
     InvalidInputError,
     PeerUnreachable,
+)
+from cloudless.exceptions import (
     TimeoutError as CloudlessTimeoutError,
 )
 from cloudless.runtime.manifest import Manifest, PeerEntry
@@ -40,7 +42,7 @@ class A2APeerClient:
         self,
         entry: PeerEntry,
         *,
-        identity: Optional["CognitoIdentity"] = None,
+        identity: CognitoIdentity | None = None,
         cost_tracker: Any = None,
         timeout_seconds: float = 30.0,
     ) -> None:
@@ -48,7 +50,7 @@ class A2APeerClient:
         self._identity = identity
         self._cost_tracker = cost_tracker
         self._timeout = timeout_seconds
-        self._cached_token: Optional[str] = None
+        self._cached_token: str | None = None
         self._token_expires_at: float = 0.0
 
     async def call(self, prompt: str, **kwargs: Any) -> Any:
@@ -112,16 +114,25 @@ class A2APeerClient:
             raise RuntimeError("httpx is required for A2A peer calls") from e
 
         # If SigV4 mode, sign the request and merge signed headers.
+        # `_identity` may be a CognitoIdentity (no sign_request) OR a
+        # SigV4Identity (has sign_request); duck-type to keep the call site
+        # free of cross-module identity-class plumbing.
         if use_sigv4 and self._identity is not None:
             import json as _json
             body_bytes = _json.dumps(request).encode()
+            sign_request = getattr(self._identity, "sign_request", None)
+            if sign_request is None:
+                raise AuthenticationError(
+                    "SigV4 mode requires an identity with .sign_request(); "
+                    f"got {type(self._identity).__name__}"
+                )
             try:
-                signed = self._identity.sign_request(
+                signed = sign_request(
                     method="POST", url=self.entry.a2a_url,
                     body=body_bytes, headers=headers,
                 )
                 headers.update(signed)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 raise AuthenticationError(f"SigV4 signing failed: {e}") from e
 
         try:
@@ -202,7 +213,7 @@ class CognitoIdentity:
         domain: str,
         client_id: str,
         client_secret: str,
-        scope: Optional[str] = None,
+        scope: str | None = None,
     ) -> None:
         self.domain = domain
         self.client_id = client_id
@@ -242,7 +253,7 @@ def build_peer_client(
     name: str,
     manifest: Manifest,
     *,
-    identity: Optional[CognitoIdentity] = None,
+    identity: CognitoIdentity | None = None,
     cost_tracker: Any = None,
     timeout_seconds: float = 30.0,
 ) -> A2APeerClient:

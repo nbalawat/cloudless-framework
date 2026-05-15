@@ -19,13 +19,10 @@ import importlib.util
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
-import yaml
 from rich.console import Console
 
 import cloudless
-
 
 _console = Console()
 
@@ -79,7 +76,7 @@ def _build_local_app(agent_class: type, *, session_id: str = "dev-session"):
     app = BedrockAgentCoreApp()
 
     @app.entrypoint
-    async def invocations(payload: dict, context):  # noqa: ANN001
+    async def invocations(payload: dict, context):
         prompt = payload.get("prompt", "")
         # Local dev always uses InMemoryContext — Q13. Cloud deploy uses
         # the real Context bridged from AgentCore's RequestContext.
@@ -99,6 +96,7 @@ def _build_local_app(agent_class: type, *, session_id: str = "dev-session"):
 def _attach_sse_route(app, instance, agent_class, *, session_id: str) -> None:
     """Mount POST /invocations/stream as a Server-Sent Events endpoint."""
     import json
+
     from starlette.requests import Request
     from starlette.responses import StreamingResponse
     from starlette.routing import Route
@@ -106,7 +104,7 @@ def _attach_sse_route(app, instance, agent_class, *, session_id: str) -> None:
     async def _stream_handler(request: Request) -> StreamingResponse:
         try:
             payload = await request.json()
-        except Exception:  # noqa: BLE001
+        except Exception:
             payload = {}
         prompt = payload.get("prompt", "")
 
@@ -117,7 +115,7 @@ def _attach_sse_route(app, instance, agent_class, *, session_id: str) -> None:
                     data = json.dumps(chunk.model_dump())
                     # SSE format: "event: <kind>\ndata: <json>\n\n"
                     yield f"event: {chunk.kind}\ndata: {data}\n\n".encode()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 err = {"kind": "error", "error": str(e), "recoverable": False}
                 yield f"event: error\ndata: {json.dumps(err)}\n\n".encode()
             yield b"event: done\ndata: {}\n\n"
@@ -142,10 +140,10 @@ def run(
     agent_name: str,
     host: str = "127.0.0.1",
     port: int = 8080,
-    project_root: Optional[Path] = None,
+    project_root: Path | None = None,
     block: bool = True,
-    record_cassette: Optional[str] = None,
-    replay_cassette: Optional[str] = None,
+    record_cassette: str | None = None,
+    replay_cassette: str | None = None,
     reload: bool = False,
 ) -> int:
     """Entry point for `cloudless dev <agent>`.
@@ -164,11 +162,12 @@ def run(
 
     cfg_path = project_root / "cloudless.yaml"
     if cfg_path.is_file():
-        from cloudless.config import ConfigValidationError, load as load_cfg
+        from cloudless.config import ConfigValidationError
+        from cloudless.config import load as load_cfg
         try:
             cfg = load_cfg(cfg_path)
         except ConfigValidationError as e:
-            _console.print(f"[red]✗[/] cloudless.yaml is invalid:")
+            _console.print("[red]✗[/] cloudless.yaml is invalid:")
             for err in e.errors:
                 _console.print(f"   - {err}")
             return 2
@@ -198,7 +197,7 @@ def run(
         _console.print(f"  cassette    [yellow]recording[/] → {record_cassette}")
     if replay_cassette:
         _console.print(f"  cassette    [green]replaying[/] ← {replay_cassette}")
-    _console.print(f"  Ctrl-C to stop")
+    _console.print("  Ctrl-C to stop")
 
     app = _build_local_app(agent_class)
 
@@ -257,11 +256,10 @@ def _run_with_reload(
     port: int,
     project_root: Path,
     src_agents: Path,
-    record_cassette: Optional[str],
-    replay_cassette: Optional[str],
+    record_cassette: str | None,
+    replay_cassette: str | None,
 ) -> int:
     """Supervisor: spawn `cloudless dev <agent>` in a child; respawn on file change."""
-    import os
     import signal
     import subprocess
     import sys
@@ -278,7 +276,7 @@ def _run_with_reload(
 
     _console.print("[bold]cloudless dev[/]  [yellow]--reload enabled[/]")
 
-    proc: Optional[subprocess.Popen] = None
+    proc: subprocess.Popen | None = None
     mtimes = _scan_mtimes(src_agents)
     try:
         proc = subprocess.Popen(cmd, cwd=str(project_root), env=dict(os.environ))

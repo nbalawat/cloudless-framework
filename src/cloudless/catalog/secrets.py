@@ -13,11 +13,11 @@ without cloud credentials.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 class SecretsBackend(Protocol):
-    async def get(self, name: str) -> Optional[str]: ...
+    async def get(self, name: str) -> str | None: ...
     async def list_names(self) -> list[str]: ...
 
 
@@ -39,9 +39,9 @@ class LocalFileBackend:
         slack_signing_secret: ...
     """
 
-    def __init__(self, path: Optional[Path] = None) -> None:
+    def __init__(self, path: Path | None = None) -> None:
         self._path = path or (Path.cwd() / ".cloudless" / "dev-secrets.yaml")
-        self._cache: Optional[dict[str, str]] = None
+        self._cache: dict[str, str] | None = None
 
     def _load(self) -> dict[str, str]:
         if self._cache is not None:
@@ -56,7 +56,7 @@ class LocalFileBackend:
         self._cache = {k: str(v) for k, v in data.items() if isinstance(k, str)}
         return self._cache
 
-    async def get(self, name: str) -> Optional[str]:
+    async def get(self, name: str) -> str | None:
         return self._load().get(name)
 
     async def list_names(self) -> list[str]:
@@ -90,8 +90,8 @@ class Secrets:
         backend: str | SecretsBackend = "local",
         prefix: str = "",
         region: str = "us-east-1",
-        path: Optional[Path] = None,
-        project: Optional[str] = None,
+        path: Path | None = None,
+        project: str | None = None,
     ) -> None:
         if isinstance(backend, str):
             self._backend = self._build_backend(
@@ -103,8 +103,8 @@ class Secrets:
 
     @staticmethod
     def _build_backend(
-        name: str, *, prefix: str, region: str, path: Optional[Path],
-        project: Optional[str] = None,
+        name: str, *, prefix: str, region: str, path: Path | None,
+        project: str | None = None,
     ) -> SecretsBackend:
         if name == "local":
             return LocalFileBackend(path=path)
@@ -118,7 +118,7 @@ class Secrets:
             return SecretManagerBackend(project=project, prefix=prefix)
         raise ValueError(f"Unknown secrets backend: {name!r}")
 
-    async def get(self, name: str) -> Optional[str]:
+    async def get(self, name: str) -> str | None:
         return await self._backend.get(name)
 
     async def list_names(self) -> list[str]:

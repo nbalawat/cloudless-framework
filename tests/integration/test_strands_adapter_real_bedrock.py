@@ -11,7 +11,6 @@ import pytest
 import cloudless
 from cloudless.runtime import InMemoryContext
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -21,7 +20,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 

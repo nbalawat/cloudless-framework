@@ -8,7 +8,6 @@ question about its contents. Verifies that:
 """
 from __future__ import annotations
 
-import io
 import os
 import struct
 import zlib
@@ -17,7 +16,6 @@ from pathlib import Path
 import pytest
 
 import cloudless
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 

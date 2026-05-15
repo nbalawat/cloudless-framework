@@ -5,16 +5,14 @@ asserts the request shape works end-to-end.
 """
 from __future__ import annotations
 
-import os
-import struct
-import wave
 import io
+import os
+import wave
 from pathlib import Path
 
 import pytest
 
 import cloudless
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -49,7 +47,9 @@ def _make_minimal_mp4() -> bytes:
     fabricate a 1-second silent black-frame MP4 via ffmpeg if installed.
 
     For CI environments without ffmpeg, this test skips."""
-    import shutil, subprocess, tempfile
+    import shutil
+    import subprocess
+    import tempfile
     if shutil.which("ffmpeg") is None:
         pytest.skip("ffmpeg not installed; can't synthesize test MP4")
     with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:

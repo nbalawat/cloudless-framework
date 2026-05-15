@@ -7,8 +7,6 @@ SDK signature compatibility (no exception on construction).
 """
 from __future__ import annotations
 
-import pytest
-
 import cloudless
 
 

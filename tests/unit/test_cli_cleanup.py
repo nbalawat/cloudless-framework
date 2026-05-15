@@ -4,8 +4,6 @@ from __future__ import annotations
 import io
 from contextlib import redirect_stdout
 
-import pytest
-
 from cloudless.cli import cleanup
 
 

@@ -22,11 +22,9 @@ Backend choice resolution:
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Optional, Protocol
-
+from datetime import UTC, datetime
+from typing import Any, Protocol
 
 # --------------------------------------------------------------------- #
 # Data shapes — all backend-neutral
@@ -46,7 +44,7 @@ class MemoryRecord:
     scope: str
     """Scope this record belongs to (user:42, session:abc, agent:global, ...)."""
 
-    score: Optional[float] = None
+    score: float | None = None
     """Similarity score for semantic-search results (0.0–1.0). None for non-search."""
 
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -87,7 +85,7 @@ class MemoryBackend(Protocol):
 
     async def add_event(
         self, *, scope: str, role: str, content: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> MemoryEvent: ...
 
     async def recall_facts(
@@ -96,7 +94,7 @@ class MemoryBackend(Protocol):
 
     async def summarize_session(
         self, *, scope: str, session_id: str,
-    ) -> Optional[MemoryRecord]: ...
+    ) -> MemoryRecord | None: ...
 
     async def get_preferences(
         self, *, scope: str,
@@ -132,7 +130,7 @@ class InMemoryBackend:
 
     async def add_event(
         self, *, scope: str, role: str, content: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> MemoryEvent:
         self._record_counter += 1
         ev = MemoryEvent(
@@ -140,7 +138,7 @@ class InMemoryBackend:
             scope=scope,
             role=role,
             content=content,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             metadata=metadata or {},
         )
         self._events.append(ev)
@@ -164,7 +162,7 @@ class InMemoryBackend:
 
     async def summarize_session(
         self, *, scope: str, session_id: str,
-    ) -> Optional[MemoryRecord]:
+    ) -> MemoryRecord | None:
         relevant = [e for e in self._events
                     if e.scope == scope and e.metadata.get("session_id") == session_id]
         if not relevant:
@@ -222,10 +220,10 @@ class Memory:
         self,
         *,
         backend: str | MemoryBackend = "in_memory",
-        memory_id: Optional[str] = None,
+        memory_id: str | None = None,
         region: str = "us-east-1",
         actor_id_template: str = "{scope}",
-        agent_engine_name: Optional[str] = None,
+        agent_engine_name: str | None = None,
         location: str = "us-central1",
     ) -> None:
         """
@@ -248,9 +246,9 @@ class Memory:
 
     @staticmethod
     def _build_backend(
-        name: str, *, memory_id: Optional[str], region: str,
+        name: str, *, memory_id: str | None, region: str,
         actor_id_template: str,
-        agent_engine_name: Optional[str] = None, location: str = "us-central1",
+        agent_engine_name: str | None = None, location: str = "us-central1",
     ) -> MemoryBackend:
         if name == "in_memory":
             return InMemoryBackend()
@@ -290,7 +288,7 @@ class Memory:
 
     async def add_event(
         self, *, scope: str, role: str, content: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> MemoryEvent:
         return await self._backend.add_event(
             scope=scope, role=role, content=content, metadata=metadata,
@@ -300,13 +298,15 @@ class Memory:
         self, *, scope: str, query: str, top_k: int = 5,
         similarity_threshold: float | None = None,
     ) -> list[MemoryRecord]:
-        # Pass similarity_threshold through if the backend supports it
+        # Pass similarity_threshold through if the backend supports it.
         import inspect
-        kw = {"scope": scope, "query": query, "top_k": top_k}
         sig = inspect.signature(self._backend.recall_facts)
         if "similarity_threshold" in sig.parameters and similarity_threshold is not None:
-            kw["similarity_threshold"] = similarity_threshold
-        return await self._backend.recall_facts(**kw)
+            return await self._backend.recall_facts(  # type: ignore[call-arg]
+                scope=scope, query=query, top_k=top_k,
+                similarity_threshold=similarity_threshold,
+            )
+        return await self._backend.recall_facts(scope=scope, query=query, top_k=top_k)
 
     async def recall_facts_cross_actor(
         self, *, scopes: list[str], query: str, top_k: int = 5,
@@ -324,7 +324,7 @@ class Memory:
                     scope=scope, query=query, top_k=top_k,
                 )
                 all_results.extend(results)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
         all_results.sort(
             key=lambda r: (r.score if r.score is not None else 0.0),
@@ -400,7 +400,7 @@ class Memory:
 
     async def summarize_session(
         self, *, scope: str, session_id: str,
-    ) -> Optional[MemoryRecord]:
+    ) -> MemoryRecord | None:
         return await self._backend.summarize_session(
             scope=scope, session_id=session_id,
         )

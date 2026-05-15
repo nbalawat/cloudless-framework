@@ -12,24 +12,19 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pytest
-
-import cloudless
-from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
-from cloudless.runtime.tasks import pause, reset_store
-
 from tests.integration.patterns._harness import (
-    aws_available,
     complete_pause,
     drain,
     fast_llm,
     find_pause,
-    gcp_available,
-    provider,
 )
 
+import cloudless
+from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
+from cloudless.runtime.tasks import pause, reset_store
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -94,7 +89,7 @@ class DebateAgent(cloudless.Agent):
                 data = json.loads(match.group(0)) if match else {}
                 confidence = float(data.get("confidence", 0.0))
                 verdict = data.get("winner", "unknown")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 confidence = 0.0
                 verdict = "unparseable"
 

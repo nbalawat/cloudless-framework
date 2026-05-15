@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Optional
-
+from typing import Any
 
 # --------------------------------------------------------------------- #
 # CloudWatch emitter (AWS)
@@ -44,7 +43,7 @@ def emit_cloudwatch_metric(
     name: str,
     value: float,
     unit: str = "None",
-    dimensions: Optional[dict[str, str]] = None,
+    dimensions: dict[str, str] | None = None,
 ) -> None:
     """Emit one custom metric to CloudWatch. No-op if not configured.
 
@@ -69,7 +68,7 @@ def emit_cloudwatch_metric(
                 "Dimensions": metric_dim,
             }],
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass  # best-effort emission
 
 
@@ -79,7 +78,7 @@ def emit_cloudwatch_metric(
 
 
 _CM_CLIENT: Any = None
-_CM_PROJECT: Optional[str] = None
+_CM_PROJECT: str | None = None
 
 
 def configure_cloud_monitoring(*, project: str) -> None:
@@ -97,7 +96,7 @@ def emit_cloud_monitoring_metric(
     *,
     name: str,
     value: float,
-    labels: Optional[dict[str, str]] = None,
+    labels: dict[str, str] | None = None,
 ) -> None:
     """Emit one custom metric to Cloud Monitoring. No-op if not configured."""
     if _CM_CLIENT is None or _CM_PROJECT is None:
@@ -125,7 +124,7 @@ def emit_cloud_monitoring_metric(
             name=f"projects/{_CM_PROJECT}",
             time_series=[series],
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass  # best-effort
 
 
@@ -139,7 +138,7 @@ def emit_metric(
     name: str,
     value: float,
     unit: str = "None",
-    dimensions: Optional[dict[str, str]] = None,
+    dimensions: dict[str, str] | None = None,
 ) -> None:
     """Emit to every configured emitter."""
     emit_cloudwatch_metric(name=name, value=value, unit=unit, dimensions=dimensions)
@@ -155,9 +154,9 @@ def configure_xray_export(*, sampler_ratio: float = 0.1) -> None:
     """Configure OTel to export spans to AWS X-Ray. No-op if SDK missing."""
     try:
         from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
     except ImportError:
         return  # no-op
@@ -186,7 +185,7 @@ def configure_cloud_trace_export(*, project: str) -> None:
 
     provider = TracerProvider()
     provider.add_span_processor(
-        BatchSpanProcessor(CloudTraceSpanExporter(project_id=project))
+        BatchSpanProcessor(CloudTraceSpanExporter(project_id=project))  # type: ignore[no-untyped-call]
     )
     if isinstance(trace.get_tracer_provider(), trace.ProxyTracerProvider):
         trace.set_tracer_provider(provider)

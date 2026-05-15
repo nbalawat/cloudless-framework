@@ -23,7 +23,6 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -100,7 +99,7 @@ def _spawn_agent(
 
 def run(
     *,
-    project_root: Optional[Path] = None,
+    project_root: Path | None = None,
     base_port: int = 8080,
     block: bool = True,
 ) -> int:
@@ -112,11 +111,12 @@ def run(
         _console.print(f"[red]✗[/] cloudless.yaml not found at {cfg_path}")
         return 1
 
-    from cloudless.config import ConfigValidationError, load as load_cfg
+    from cloudless.config import ConfigValidationError
+    from cloudless.config import load as load_cfg
     try:
         cfg = load_cfg(cfg_path)
     except ConfigValidationError as e:
-        _console.print(f"[red]✗[/] cloudless.yaml invalid:")
+        _console.print("[red]✗[/] cloudless.yaml invalid:")
         for err in e.errors:
             _console.print(f"   - {err}")
         return 2

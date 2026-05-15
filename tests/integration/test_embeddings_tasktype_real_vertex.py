@@ -8,7 +8,6 @@ import pytest
 
 import cloudless
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 

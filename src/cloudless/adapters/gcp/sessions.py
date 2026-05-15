@@ -16,8 +16,8 @@ API surface mirrors the existing AgentCoreBackend so swapping is trivial.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from cloudless.catalog.memory import MemoryEvent, MemoryRecord
 
@@ -35,7 +35,7 @@ class VertexSessionsBackend:
         self,
         *,
         agent_engine_name: str,
-        project: Optional[str] = None,
+        project: str | None = None,
         location: str = "us-central1",
         client: Any = None,
     ) -> None:
@@ -75,7 +75,7 @@ class VertexSessionsBackend:
 
     async def add_event(
         self, *, scope: str, role: str, content: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> MemoryEvent:
         try:
             from google.cloud import aiplatform_v1beta1 as v1b
@@ -89,7 +89,7 @@ class VertexSessionsBackend:
                     session=v1b.Session(name=self._session_name(scope)),
                 ),
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass  # session already exists
 
         # Append an event to the session
@@ -105,7 +105,7 @@ class VertexSessionsBackend:
         )
         try:
             event = self._client.append_event(request=request)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise self._translate(e) from e
 
         return MemoryEvent(
@@ -113,7 +113,7 @@ class VertexSessionsBackend:
             scope=scope,
             role=role,
             content=content,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             metadata=metadata or {},
         )
 
@@ -128,7 +128,7 @@ class VertexSessionsBackend:
         )
         try:
             page = self._client.list_events(request=request)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise self._translate(e) from e
 
         events: list[MemoryEvent] = []
@@ -141,7 +141,7 @@ class VertexSessionsBackend:
                 scope=scope,
                 role=ev.author or "user",
                 content=content_text,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 metadata={},
             ))
             if len(events) >= limit:
@@ -175,7 +175,7 @@ class VertexSessionsBackend:
 
     async def summarize_session(
         self, *, scope: str, session_id: str,
-    ) -> Optional[MemoryRecord]:
+    ) -> MemoryRecord | None:
         events = await self.list_events(scope=scope, limit=20)
         if not events:
             return None
@@ -202,7 +202,7 @@ class VertexSessionsBackend:
                 request=v1b.DeleteSessionRequest(name=self._session_name(scope)),
             )
             return 1
-        except Exception:  # noqa: BLE001
+        except Exception:
             return 0
 
     @staticmethod

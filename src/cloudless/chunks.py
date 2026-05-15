@@ -15,7 +15,7 @@ Why typed chunks (rather than raw strings):
 """
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,7 +42,7 @@ class ToolCallChunk(_ChunkBase):
     kind: str = Field(default="tool_call", frozen=True)
     name: str
     args: dict[str, Any]
-    call_id: Optional[str] = None
+    call_id: str | None = None
 
 
 class ToolResultChunk(_ChunkBase):
@@ -51,7 +51,7 @@ class ToolResultChunk(_ChunkBase):
     kind: str = Field(default="tool_result", frozen=True)
     name: str
     result: Any
-    call_id: Optional[str] = None
+    call_id: str | None = None
     is_error: bool = False
 
 
@@ -78,7 +78,7 @@ class FinalChunk(_ChunkBase):
     """Terminal marker. Carries the final agent state if the framework supplies one."""
 
     kind: str = Field(default="final", frozen=True)
-    state: Optional[dict[str, Any]] = None
+    state: dict[str, Any] | None = None
 
 
 class PauseChunk(_ChunkBase):
@@ -97,10 +97,10 @@ class PauseChunk(_ChunkBase):
     reason: str = ""
     """Why the agent paused (e.g., "awaiting refund approval > $1000")."""
 
-    pending_action: Optional[dict[str, Any]] = None
+    pending_action: dict[str, Any] | None = None
     """Snapshot of what the agent intends to do once resumed."""
 
-    expires_at: Optional[float] = None
+    expires_at: float | None = None
     """Unix epoch seconds for TTL (default: 24h post-pause)."""
 
 
@@ -115,20 +115,20 @@ class ErrorChunk(_ChunkBase):
     kind: str = Field(default="error", frozen=True)
     error: str
     recoverable: bool = True
-    details: Optional[dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 # Tagged-union type for type-narrowing in consumers
-Chunk = Union[
-    TextChunk,
-    ToolCallChunk,
-    ToolResultChunk,
-    ReasoningChunk,
-    StateChunk,
-    PauseChunk,
-    FinalChunk,
-    ErrorChunk,
-]
+Chunk = (
+    TextChunk
+    | ToolCallChunk
+    | ToolResultChunk
+    | ReasoningChunk
+    | StateChunk
+    | PauseChunk
+    | FinalChunk
+    | ErrorChunk
+)
 """Tagged union of every concrete chunk class. The `kind` field is the
 discriminator. Pattern-match consumers should branch on `isinstance(c, X)`
 or `c.kind == "..."`.

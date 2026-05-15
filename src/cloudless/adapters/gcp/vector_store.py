@@ -12,7 +12,7 @@ Cloudless wraps the search endpoint and surfaces results as VectorMatch.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from cloudless.catalog.vector_store import VectorMatch
 
@@ -33,7 +33,7 @@ class VertexSearchBackend:
         self,
         *,
         datastore_id: str,
-        project: Optional[str] = None,
+        project: str | None = None,
         location: str = "global",
         serving_config_id: str = "default_config",
         client: Any = None,
@@ -93,7 +93,7 @@ class VertexSearchBackend:
             )
         try:
             page = self._client.search(request=request)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise self._translate(e) from e
 
         out: list[VectorMatch] = []

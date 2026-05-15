@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import json
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
-import pytest
 from starlette.testclient import TestClient
 
 import cloudless
@@ -64,7 +63,7 @@ def test_stream_endpoint_emits_sse_events_per_chunk():
 
     # First text chunk payload contains the actual text
     first_text_block = body.split("event: text", 1)[1].split("\n\n", 1)[0]
-    data_line = [l for l in first_text_block.splitlines() if l.startswith("data:")][0]
+    data_line = next(ln for ln in first_text_block.splitlines() if ln.startswith("data:"))
     chunk_json = json.loads(data_line.removeprefix("data: ").strip())
     assert chunk_json["text"] == "hello "
     assert chunk_json["kind"] == "text"

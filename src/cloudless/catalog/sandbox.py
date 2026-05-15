@@ -13,12 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 @dataclass(frozen=True)
@@ -86,7 +85,7 @@ class LocalSubprocessBackend:
             )
             try:
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 return SandboxResult(stdout="", stderr="execution timed out", exit_code=124)
             return SandboxResult(

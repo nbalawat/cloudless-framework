@@ -9,7 +9,7 @@ Conventional name: `cloudless-{project}-memory`.
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
+from typing import Any
 
 
 def _memory_name(project: str) -> str:
@@ -50,7 +50,7 @@ def ensure_memory_resource(
         for mem in client.list_memories().get("memories", []):
             if mem.get("name") == name:
                 return mem.get("id") or mem.get("memoryId")
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     # AgentCore strategy regex disallows hyphens; default to a snake-cased name.
@@ -94,7 +94,7 @@ def ensure_memory_resource(
             eventExpiryDuration=min(retention_days, 365),
             memoryStrategies=[strategy_config],
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise RuntimeError(f"Failed to create AgentCore Memory {name!r}: {e}") from e
 
     memory_id = (
@@ -114,7 +114,7 @@ def ensure_memory_resource(
             status = got.get("memory", {}).get("status") or got.get("status")
             if status == "ACTIVE":
                 break
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         time.sleep(2)
 

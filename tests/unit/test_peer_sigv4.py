@@ -1,15 +1,11 @@
 """Verify A2APeerClient + SigV4Identity flow with mocked httpx."""
 from __future__ import annotations
 
-import json
-from typing import AsyncIterator
-
 import pytest
 
 from cloudless.runtime.identity import SigV4Identity
 from cloudless.runtime.manifest import PeerEntry
 from cloudless.runtime.peer import A2APeerClient
-
 
 pytestmark = [pytest.mark.asyncio]
 
@@ -69,7 +65,7 @@ async def test_real_sigv4_signing_produces_aws4_header():
     try:
         import boto3
         boto3.client("sts").get_caller_identity()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("AWS credentials not configured")
 
     identity = SigV4Identity(service="execute-api", region="us-east-1")

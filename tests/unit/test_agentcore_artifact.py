@@ -13,9 +13,8 @@ import pytest
 
 import cloudless
 from cloudless.adapters.aws.agentcore import (
-    AgentCoreDeployer,
-    DeploymentResult,
     _FRAMEWORK_REQS,
+    AgentCoreDeployer,
 )
 
 
@@ -95,7 +94,7 @@ class TestMaterializeArtifact:
             async def query(self, ctx, prompt):
                 yield cloudless.TextChunk(text="")
         d = AgentCoreDeployer()
-        with pytest.raises(ValueError, match="not a @cloudless.agent class"):
+        with pytest.raises(ValueError, match=r"not a @cloudless\.agent class"):
             d.materialize_artifact(Bare, tmp_build,
                                    extra_user_files={"user_agent.py": "# stub"})
 

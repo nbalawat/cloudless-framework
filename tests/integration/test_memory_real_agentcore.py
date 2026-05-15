@@ -16,9 +16,7 @@ import uuid
 import boto3
 import pytest
 
-import cloudless
 from cloudless.catalog.memory import Memory
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -28,7 +26,7 @@ def aws_available() -> bool:
     try:
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -54,7 +52,7 @@ def memory_resource(aws_available):
             ],
         )
         memory_id = resp["memory"]["id"]
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         pytest.skip(f"could not create memory (perms or quota?): {e}")
 
     # Poll until memory status is ACTIVE (semantic strategy takes 30-90s)
@@ -70,15 +68,15 @@ def memory_resource(aws_available):
     else:
         try:
             control.delete_memory(memoryId=memory_id)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
-        pytest.skip(f"memory never became ACTIVE in 3 min")
+        pytest.skip("memory never became ACTIVE in 3 min")
     yield memory_id
 
     # Teardown
     try:
         control.delete_memory(memoryId=memory_id)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 

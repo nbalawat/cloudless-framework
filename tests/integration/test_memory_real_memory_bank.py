@@ -6,11 +6,9 @@ tears down. Cost: ~$0.05 (Agent Engine creation dominates).
 from __future__ import annotations
 
 import os
-import time
 import uuid
 
 import pytest
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -21,7 +19,7 @@ def gcp_available() -> bool:
         import vertexai
         vertexai.init(project="agentic-experiments", location="us-central1")
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -84,7 +82,7 @@ def memory_bank_parent(gcp_available):
             display_name=f"cloudless-mem-test-{uuid.uuid4().hex[:8]}",
             description="cloudless Memory Bank integration test parent",
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         pytest.fail(f"could not create Agent Engine: {e}")
 
     yield remote.resource_name
@@ -92,7 +90,7 @@ def memory_bank_parent(gcp_available):
     # Teardown only if we created it
     try:
         agent_engines.delete(remote.resource_name, force=True)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 

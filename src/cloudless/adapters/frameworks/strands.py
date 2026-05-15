@@ -7,7 +7,8 @@ translates Strands' event stream into cloudless Chunks per Q16.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from cloudless.agent import Agent
 from cloudless.chunks import (
@@ -140,6 +141,6 @@ def _coerce_serializable(obj: Any) -> Any:
         if callable(fn):
             try:
                 return fn()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
     return str(obj)

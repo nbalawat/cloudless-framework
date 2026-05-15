@@ -12,6 +12,13 @@ M1 ships LLM only (AWS-only); subsequent milestones add the rest:
 """
 from __future__ import annotations
 
+from cloudless.catalog.embeddings import (
+    DEFAULT_EMBEDDING_ALIASES,
+    EmbeddingAlias,
+    Embeddings,
+    EmbeddingsBackend,
+    resolve_embedding,
+)
 from cloudless.catalog.llm import LLM, ModelAlias, resolve_model
 from cloudless.catalog.memory import (
     InMemoryBackend,
@@ -19,13 +26,6 @@ from cloudless.catalog.memory import (
     MemoryBackend,
     MemoryEvent,
     MemoryRecord,
-)
-from cloudless.catalog.embeddings import (
-    DEFAULT_EMBEDDING_ALIASES,
-    Embeddings,
-    EmbeddingsBackend,
-    EmbeddingAlias,
-    resolve_embedding,
 )
 from cloudless.catalog.sandbox import (
     LocalSubprocessBackend,
@@ -43,12 +43,30 @@ from cloudless.catalog.vector_store import (
 )
 
 __all__ = [
-    "LLM", "ModelAlias", "resolve_model",
-    "Memory", "MemoryBackend", "MemoryEvent", "MemoryRecord", "InMemoryBackend",
-    "Secrets", "SecretsBackend", "LocalFileBackend",
-    "Sandbox", "SandboxBackend", "SandboxResult", "LocalSubprocessBackend",
-    "Embeddings", "EmbeddingsBackend", "EmbeddingAlias", "resolve_embedding",
     "DEFAULT_EMBEDDING_ALIASES",
-    "VectorStore", "VectorStoreBackend", "VectorMatch", "InMemoryVectorBackend",
-    "Tool", "tool",
+    "LLM",
+    "EmbeddingAlias",
+    "Embeddings",
+    "EmbeddingsBackend",
+    "InMemoryBackend",
+    "InMemoryVectorBackend",
+    "LocalFileBackend",
+    "LocalSubprocessBackend",
+    "Memory",
+    "MemoryBackend",
+    "MemoryEvent",
+    "MemoryRecord",
+    "ModelAlias",
+    "Sandbox",
+    "SandboxBackend",
+    "SandboxResult",
+    "Secrets",
+    "SecretsBackend",
+    "Tool",
+    "VectorMatch",
+    "VectorStore",
+    "VectorStoreBackend",
+    "resolve_embedding",
+    "resolve_model",
+    "tool",
 ]

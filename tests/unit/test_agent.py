@@ -1,7 +1,8 @@
 """Tests for cloudless.agent — Agent base class + @cloudless.agent decorator (Q10)."""
 from __future__ import annotations
 
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 import pytest
 
@@ -54,8 +55,10 @@ class TestDecoratorBasics:
         class FrozenAgent(_NoopAgent):
             pass
 
+        from dataclasses import FrozenInstanceError
+
         m = FrozenAgent.__cloudless_metadata__
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             # frozen dataclass — mutation raises FrozenInstanceError
             m.name = "renamed"  # type: ignore[misc]
 

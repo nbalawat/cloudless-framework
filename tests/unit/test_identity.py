@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+
 import pytest
 
 from cloudless.runtime.identity import (
@@ -12,7 +13,6 @@ from cloudless.runtime.identity import (
     SigV4Identity,
     StoredToken,
 )
-
 
 pytestmark = [pytest.mark.asyncio]
 

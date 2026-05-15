@@ -8,7 +8,6 @@ from cloudless.exceptions import GuardrailBlocked
 from cloudless.runtime.audit import InMemorySink, reset_sinks, set_sinks
 from cloudless.runtime.policy import get_registry
 
-
 pytestmark = [pytest.mark.asyncio]
 
 

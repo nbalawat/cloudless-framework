@@ -1,9 +1,8 @@
 """Unit tests for the inbound A2A server wrapper."""
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
-import pytest
 from starlette.testclient import TestClient
 
 import cloudless

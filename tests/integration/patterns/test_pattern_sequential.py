@@ -11,24 +11,19 @@ approved=True, the publisher runs.
 """
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pytest
-
-import cloudless
-from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
-from cloudless.runtime.tasks import pause, reset_store, resume
-
 from tests.integration.patterns._harness import (
-    aws_available,
     complete_pause,
     drain,
     fast_llm,
     find_pause,
-    gcp_available,
-    provider,
 )
 
+import cloudless
+from cloudless.chunks import Chunk, FinalChunk, PauseChunk, TextChunk
+from cloudless.runtime.tasks import pause, reset_store, resume
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 

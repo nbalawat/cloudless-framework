@@ -44,8 +44,7 @@ Spec (A2A v0.3):
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
-
+from typing import Any
 
 JSONRPC_ERRORS = {
     -32700: "Parse error",
@@ -60,8 +59,8 @@ def build_a2a_app(
     agent_factory,
     *,
     path: str = "/a2a",
-    require_audience: Optional[str] = None,
-    agent_card: Optional[dict] = None,
+    require_audience: str | None = None,
+    agent_card: dict | None = None,
     agent_card_path: str = "/.well-known/agent.json",
 ):
     """Construct a Starlette app mounting POST `path` as A2A receiver.
@@ -85,7 +84,7 @@ def build_a2a_app(
         # Parse JSON-RPC envelope
         try:
             payload = await request.json()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return _jsonrpc_error(None, -32700)
 
         if not isinstance(payload, dict) or payload.get("jsonrpc") != "2.0":
@@ -113,7 +112,6 @@ def build_a2a_app(
 
         # Build context + ingest attribution headers
         import cloudless
-        from cloudless.runtime.audit import emit_audit
         ctx = cloudless.InMemoryContext()
         attr_headers = {
             k: v for k, v in request.headers.items()
@@ -139,7 +137,7 @@ def build_a2a_app(
             return _jsonrpc_error(msg_id, -32600, str(e))
         except cloudless.InvalidInputError as e:
             return _jsonrpc_error(msg_id, -32602, str(e))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return _jsonrpc_error(msg_id, -32603, f"internal error: {e}")
 
         usd_total = await ctx.cost.session_total_usd()
@@ -187,7 +185,7 @@ def build_a2a_app(
                 "defaultInputModes": ["text/plain"],
                 "defaultOutputModes": ["text/plain"],
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             return {"name": "unknown", "description": "", "capabilities": []}
 
     resolved_card = agent_card or _derive_agent_card()
@@ -200,7 +198,7 @@ def build_a2a_app(
         from starlette.responses import StreamingResponse
         try:
             payload = await request.json()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return _jsonrpc_error(None, -32700)
         if not isinstance(payload, dict) or payload.get("jsonrpc") != "2.0":
             return _jsonrpc_error(payload.get("id") if isinstance(payload, dict) else None, -32600)
@@ -232,7 +230,7 @@ def build_a2a_app(
                         "result": {"chunk": chunk.model_dump(), "done": False},
                     }
                     yield f"data: {json.dumps(payload)}\n\n".encode()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 err = {
                     "jsonrpc": "2.0", "id": msg_id,
                     "error": {"code": -32603, "message": str(e)},
@@ -241,7 +239,7 @@ def build_a2a_app(
             done = {"jsonrpc": "2.0", "id": msg_id, "result": {"done": True}}
             yield f"data: {json.dumps(done)}\n\n".encode()
 
-        return StreamingResponse(_events(), media_type="text/event-stream",
+        return StreamingResponse(_events(), media_type="text/event-stream",  # type: ignore[no-untyped-call]
                                   headers={"Cache-Control": "no-cache",
                                            "X-Accel-Buffering": "no"})
 
@@ -252,7 +250,7 @@ def build_a2a_app(
     ])
 
 
-def _jsonrpc_error(req_id: Any, code: int, message: Optional[str] = None) -> "Any":
+def _jsonrpc_error(req_id: Any, code: int, message: str | None = None) -> Any:
     """Build a JSON-RPC error response."""
     from starlette.responses import JSONResponse
     return JSONResponse({

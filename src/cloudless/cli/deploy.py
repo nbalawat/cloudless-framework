@@ -4,12 +4,10 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Optional
 
 import yaml
 from rich.console import Console
 
-import cloudless
 from cloudless.adapters.aws.agentcore import AgentCoreDeployer
 
 _console = Console()
@@ -61,8 +59,8 @@ def run(
     *,
     agent_name: str,
     region: str = "us-east-1",
-    build_dir: Optional[Path] = None,
-    project_root: Optional[Path] = None,
+    build_dir: Path | None = None,
+    project_root: Path | None = None,
 ) -> int:
     """`cloudless deploy <agent>` entrypoint — dispatches by cloud (Q4)."""
     project_root = (project_root or Path.cwd()).resolve()
@@ -102,7 +100,7 @@ def run(
 
 def _deploy_aws(
     agent_class, agent_cfg: dict, region: str,
-    build_dir: Optional[Path], src_agents: Path, cfg: dict,
+    build_dir: Path | None, src_agents: Path, cfg: dict,
 ) -> int:
     region = agent_cfg.get("region", region)
     deployer = AgentCoreDeployer(region=region)
@@ -148,7 +146,7 @@ def _deploy_gcp(agent_class, agent_cfg: dict, cfg: dict) -> int:
 
     try:
         result = AgentRuntimeDeployer(project=project, location=location).deploy(agent_class)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[red]✗ deploy failed:[/] {e}")
         return 2
 

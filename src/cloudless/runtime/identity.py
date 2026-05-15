@@ -28,9 +28,8 @@ import base64
 import hashlib
 import secrets
 import time
-from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol
-
+from dataclasses import dataclass
+from typing import Any, Protocol
 
 # --------------------------------------------------------------------- #
 # Errors
@@ -59,13 +58,13 @@ class OAuthRequired(Exception):
 class StoredToken:
     """Stored OAuth credentials for one (user, provider) tuple."""
     access_token: str
-    refresh_token: Optional[str] = None
+    refresh_token: str | None = None
     expires_at: float = 0.0
     scopes: tuple[str, ...] = ()
 
 
 class TokenStore(Protocol):
-    def get(self, *, user_id: str, provider: str) -> Optional[StoredToken]: ...
+    def get(self, *, user_id: str, provider: str) -> StoredToken | None: ...
     def put(self, *, user_id: str, provider: str, token: StoredToken) -> None: ...
     def delete(self, *, user_id: str, provider: str) -> None: ...
 
@@ -76,7 +75,7 @@ class InMemoryTokenStore:
     def __init__(self) -> None:
         self._tokens: dict[tuple[str, str], StoredToken] = {}
 
-    def get(self, *, user_id: str, provider: str) -> Optional[StoredToken]:
+    def get(self, *, user_id: str, provider: str) -> StoredToken | None:
         # Return stored token regardless of expiry; expiry handling lives in
         # OAuth3LOIdentity (so it can attempt a refresh).
         return self._tokens.get((user_id, provider))
@@ -213,7 +212,7 @@ class OAuth3LOIdentity:
         payload = resp.json()
         return self._token_from_payload(payload)
 
-    async def _refresh(self, refresh_token: str) -> Optional[StoredToken]:
+    async def _refresh(self, refresh_token: str) -> StoredToken | None:
         try:
             import httpx
         except ImportError:
@@ -228,7 +227,7 @@ class OAuth3LOIdentity:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(self.config.token_endpoint, data=data)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
         if resp.status_code != 200:
             return None
@@ -299,7 +298,7 @@ class SigV4Identity:
 
     def sign_request(
         self, *, method: str, url: str, body: bytes,
-        headers: Optional[dict[str, str]] = None,
+        headers: dict[str, str] | None = None,
     ) -> dict[str, str]:
         """Return SigV4-signed headers for the given request.
 

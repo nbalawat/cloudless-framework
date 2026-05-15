@@ -21,17 +21,19 @@ M1 ships Bedrock backend only. M2 adds Gemini via google-genai.
 """
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Iterable, Optional
+from typing import Any
 
 from cloudless.chunks import TextChunk
 from cloudless.exceptions import (
     AuthenticationError,
     InvalidInputError,
     ThrottledError,
+)
+from cloudless.exceptions import (
     TimeoutError as CloudlessTimeoutError,
 )
-
 
 # --------------------------------------------------------------------- #
 # Model alias table — the OQ4 "model alias resolution table" implementation.
@@ -135,15 +137,15 @@ class LLM:
         *,
         region: str = "us-east-1",
         client: Any = None,
-        project: Optional[str] = None,
-        location: Optional[str] = None,
+        project: str | None = None,
+        location: str | None = None,
         extended_thinking: bool = False,
-        guardrail_id: Optional[str] = None,
-        guardrail_version: Optional[str] = "DRAFT",
-        safety_settings: Optional[list[dict]] = None,
-        model_armor_template: Optional[str] = None,
+        guardrail_id: str | None = None,
+        guardrail_version: str | None = "DRAFT",
+        safety_settings: list[dict] | None = None,
+        model_armor_template: str | None = None,
         grounding: bool | str = False,
-        cached_content: Optional[str] = None,
+        cached_content: str | None = None,
     ) -> None:
         """
         Args:
@@ -199,7 +201,7 @@ class LLM:
             _, project = google.auth.default()
             if project:
                 return project
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         raise InvalidInputError(
             "GCP project required for Gemini. Set CLOUDLESS_GCP_PROJECT or pass project=..."
@@ -213,12 +215,12 @@ class LLM:
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 512,
         ctx: Any = None,
-        images: Optional[list[dict]] = None,
-        videos: Optional[list[dict]] = None,
-        audios: Optional[list[dict]] = None,
+        images: list[dict] | None = None,
+        videos: list[dict] | None = None,
+        audios: list[dict] | None = None,
     ) -> str:
         """Single-shot request/response. Returns the assistant's text reply.
 
@@ -242,8 +244,8 @@ class LLM:
             CloudlessTimeoutError: Boto3 read timeout.
             InvalidInputError: Bedrock returned 400.
         """
-        from cloudless.runtime.policy import get_registry
         from cloudless.runtime import tracing
+        from cloudless.runtime.policy import get_registry
         reg = get_registry()
         prompt = reg.run("before_llm", prompt=prompt, model=self.alias.model_id, ctx=ctx)["prompt"]
 
@@ -362,10 +364,10 @@ class LLM:
         self,
         prompt: str,
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 512,
         ctx: Any = None,
-        images: Optional[list[dict]] = None,
+        images: list[dict] | None = None,
     ) -> AsyncIterator[TextChunk]:
         """Streaming variant — yields cloudless TextChunks as tokens arrive."""
         from cloudless.runtime.policy import get_registry
@@ -455,7 +457,7 @@ class LLM:
         return e
 
 
-def list_models(provider: Optional[str] = None) -> Iterable[ModelAlias]:
+def list_models(provider: str | None = None) -> Iterable[ModelAlias]:
     """Yield available model aliases, optionally filtered by provider."""
     for a in DEFAULT_ALIASES:
         if provider is None or a.provider == provider:

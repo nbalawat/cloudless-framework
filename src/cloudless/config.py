@@ -35,8 +35,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
-
+from typing import Any
 
 # --------------------------------------------------------------------- #
 # Typed config model
@@ -53,10 +52,10 @@ VALID_FRAMEWORKS = frozenset({"langgraph", "strands", "adk", "maf"})
 class AgentConfig:
     name: str
     cloud: str
-    framework: Optional[str] = None
+    framework: str | None = None
     interfaces: tuple[str, ...] = ("http",)
     peers: tuple[str, ...] = ()
-    version: Optional[str] = None
+    version: str | None = None
 
 
 @dataclass

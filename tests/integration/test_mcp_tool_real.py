@@ -10,7 +10,6 @@ MCP handshake (initialize → tools/list → tools/call). It just POSTs
 """
 from __future__ import annotations
 
-import json
 import socket
 import threading
 import time
@@ -23,7 +22,6 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 import cloudless
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -85,7 +83,7 @@ def mcp_server():
             httpx.post(f"http://127.0.0.1:{port}/",
                        json={"jsonrpc": "2.0", "id": "ping", "method": "ping"}, timeout=0.5)
             break
-        except Exception:  # noqa: BLE001
+        except Exception:
             time.sleep(0.1)
     yield f"http://127.0.0.1:{port}/"
     server.should_exit = True
@@ -147,7 +145,7 @@ async def test_from_mcp_server_includes_auth_header(mcp_server):
                        json={"jsonrpc": "2.0", "id": "x", "method": "tools/call",
                              "params": {"name": "x", "arguments": {}}}, timeout=0.5)
             break
-        except Exception:  # noqa: BLE001
+        except Exception:
             time.sleep(0.1)
 
     try:

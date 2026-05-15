@@ -5,7 +5,6 @@ import pytest
 
 from cloudless.adapters.aws.memory_provision import ensure_memory_resource
 
-
 pytestmark = [pytest.mark.asyncio]
 
 

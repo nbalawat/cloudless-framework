@@ -2,17 +2,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import sys
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 from rich.table import Table
 
 import cloudless
 from cloudless.eval import (
-    EvalCase,
     EvalDataset,
     contains_substring,
     regex_match,
@@ -32,7 +28,7 @@ async def _llm_target(prompt: str) -> str:
 def run(
     *,
     dataset_path: str,
-    output_path: Optional[str] = None,
+    output_path: str | None = None,
     model: str = "nova-micro",
     region: str = "us-east-1",
 ) -> int:

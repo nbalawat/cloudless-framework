@@ -6,7 +6,7 @@ or creates a fresh one. Returns the full resource name.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 def _engine_display_name(project: str) -> str:
@@ -44,7 +44,7 @@ def ensure_agent_engine(
             display = getattr(engine, "display_name", "") or ""
             if display == name:
                 return engine.resource_name
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     # Create a minimal engine. Memory Bank attaches via its own API once the
@@ -55,7 +55,7 @@ def ensure_agent_engine(
             display_name=name,
             description=f"cloudless-managed Agent Engine for project {project!r}",
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise RuntimeError(f"Failed to create Agent Engine {name!r}: {e}") from e
 
     return engine.resource_name

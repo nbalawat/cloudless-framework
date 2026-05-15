@@ -22,11 +22,9 @@ Safety:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from rich.console import Console
 from rich.table import Table
-
 
 _console = Console()
 
@@ -83,7 +81,7 @@ def discover_aws(prefix: str, *, region: str = "us-east-1") -> tuple[list[str], 
                 name = r.get("agentRuntimeName", "")
                 if name.startswith(prefix):
                     runtimes.append(r["agentRuntimeId"])
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[yellow]warn[/] could not list AgentCore runtimes: {e}")
 
     # ECR repos
@@ -94,7 +92,7 @@ def discover_aws(prefix: str, *, region: str = "us-east-1") -> tuple[list[str], 
             for r in page.get("repositories", []):
                 if r["repositoryName"].startswith(prefix):
                     ecr_repos.append(r["repositoryName"])
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[yellow]warn[/] could not list ECR repos: {e}")
 
     # IAM roles
@@ -105,7 +103,7 @@ def discover_aws(prefix: str, *, region: str = "us-east-1") -> tuple[list[str], 
             for r in page.get("Roles", []):
                 if r["RoleName"].startswith(prefix):
                     iam_roles.append(r["RoleName"])
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[yellow]warn[/] could not list IAM roles: {e}")
 
     # S3 buckets
@@ -114,7 +112,7 @@ def discover_aws(prefix: str, *, region: str = "us-east-1") -> tuple[list[str], 
         for b in s3.list_buckets().get("Buckets", []):
             if b["Name"].startswith(prefix):
                 s3_buckets.append(b["Name"])
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[yellow]warn[/] could not list S3 buckets: {e}")
 
     return runtimes, ecr_repos, iam_roles, s3_buckets
@@ -136,7 +134,7 @@ def discover_gcp(prefix: str, *, project: str, location: str = "us-central1") ->
                 agent_engines.append(engine.resource_name)
     except ImportError:
         pass
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[yellow]warn[/] could not list Agent Engines: {e}")
 
     # GCS buckets
@@ -148,7 +146,7 @@ def discover_gcp(prefix: str, *, project: str, location: str = "us-central1") ->
                 gcs_buckets.append(b.name)
     except ImportError:
         pass
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _console.print(f"[yellow]warn[/] could not list GCS buckets: {e}")
 
     return agent_engines, gcs_buckets
@@ -160,7 +158,7 @@ def build_plan(
     aws: bool = True,
     gcp: bool = True,
     aws_region: str = "us-east-1",
-    gcp_project: Optional[str] = None,
+    gcp_project: str | None = None,
 ) -> CleanupPlan:
     """Discover all matching resources and return a CleanupPlan."""
     plan = CleanupPlan()
@@ -183,7 +181,7 @@ def build_plan(
 
 
 def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
-                 gcp_project: Optional[str] = None) -> int:
+                 gcp_project: str | None = None) -> int:
     """Actually delete the resources listed in `plan`. Returns failure count."""
     failures = 0
 
@@ -201,7 +199,7 @@ def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
             assert agc is not None
             agc.delete_agent_runtime(agentRuntimeId=rt_id)
             _console.print(f"  [green]✓[/] deleted runtime {rt_id}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _console.print(f"  [red]✗[/] runtime {rt_id}: {e}")
             failures += 1
 
@@ -210,7 +208,7 @@ def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
             assert ecr is not None
             ecr.delete_repository(repositoryName=repo, force=True)
             _console.print(f"  [green]✓[/] deleted ECR repo {repo}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _console.print(f"  [red]✗[/] ECR repo {repo}: {e}")
             failures += 1
 
@@ -224,7 +222,7 @@ def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
                 iam.delete_role_policy(RoleName=role, PolicyName=p)
             iam.delete_role(RoleName=role)
             _console.print(f"  [green]✓[/] deleted IAM role {role}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _console.print(f"  [red]✗[/] IAM role {role}: {e}")
             failures += 1
 
@@ -244,7 +242,7 @@ def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
                     )
             s3.delete_bucket(Bucket=bucket)
             _console.print(f"  [green]✓[/] deleted S3 bucket {bucket}")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _console.print(f"  [red]✗[/] S3 bucket {bucket}: {e}")
             failures += 1
 
@@ -262,7 +260,7 @@ def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
                 engine = ae.get(resource_name)
                 engine.delete(force=True)
                 _console.print(f"  [green]✓[/] deleted Agent Engine {resource_name}")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 _console.print(f"  [red]✗[/] Agent Engine {resource_name}: {e}")
                 failures += 1
 
@@ -274,7 +272,7 @@ def execute_plan(plan: CleanupPlan, *, aws_region: str = "us-east-1",
                     bucket = client.bucket(name)
                     bucket.delete(force=True)
                     _console.print(f"  [green]✓[/] deleted GCS bucket {name}")
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     _console.print(f"  [red]✗[/] GCS bucket {name}: {e}")
                     failures += 1
         except ImportError:
@@ -312,7 +310,7 @@ def run(
     aws: bool = True,
     gcp: bool = False,
     aws_region: str = "us-east-1",
-    gcp_project: Optional[str] = None,
+    gcp_project: str | None = None,
     dry_run: bool = True,
     yes: bool = False,
 ) -> int:

@@ -17,13 +17,13 @@ know which parent to use.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
-from google.cloud import aiplatform_v1beta1 as v1b
 from google.api_core.exceptions import GoogleAPICallError, NotFound
+from google.cloud import aiplatform_v1beta1 as v1b
 
-from cloudless.catalog.memory import MemoryBackend, MemoryEvent, MemoryRecord
+from cloudless.catalog.memory import MemoryEvent, MemoryRecord
 
 
 class MemoryBankBackend:
@@ -69,7 +69,7 @@ class MemoryBankBackend:
 
     async def add_event(
         self, *, scope: str, role: str, content: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> MemoryEvent:
         fact = f"{role}: {content}"
         memory = v1b.Memory(
@@ -97,7 +97,7 @@ class MemoryBankBackend:
             scope=scope,
             role=role,
             content=content,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             metadata=metadata or {},
         )
 
@@ -140,7 +140,7 @@ class MemoryBankBackend:
 
     async def summarize_session(
         self, *, scope: str, session_id: str,
-    ) -> Optional[MemoryRecord]:
+    ) -> MemoryRecord | None:
         results = await self.recall_facts(
             scope=scope, query=f"session {session_id} summary", top_k=1,
         )
@@ -177,7 +177,7 @@ class MemoryBankBackend:
                 scope=scope,
                 role=role,
                 content=content,
-                timestamp=m.create_time or datetime.now(timezone.utc),
+                timestamp=m.create_time or datetime.now(UTC),
                 metadata={"name": m.name, "display_name": m.display_name},
             ))
             if len(events) >= limit:
@@ -209,7 +209,9 @@ class MemoryBankBackend:
     @staticmethod
     def _translate(e: GoogleAPICallError) -> Exception:
         from cloudless.exceptions import (
-            AuthenticationError, InvalidInputError, ThrottledError,
+            AuthenticationError,
+            InvalidInputError,
+            ThrottledError,
         )
         msg = str(e)
         # Map status codes if available

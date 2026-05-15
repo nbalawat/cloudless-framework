@@ -13,10 +13,7 @@ anything starting with `cloudless-kb-` to mark it as a test target.
 """
 from __future__ import annotations
 
-import os
-
 import pytest
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -27,7 +24,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("AWS credentials not configured")
         return False
 
@@ -54,13 +51,8 @@ def cloudless_kb(aws_available):
 
 async def test_kb_retrieve_returns_results(cloudless_kb):
     """Exercise `BedrockKBBackend.search` against a real KB."""
-    import cloudless
-    vector_store = cloudless.VectorStore(
-        backend=cloudless._import_module().BedrockKBBackend(
-            knowledge_base_id=cloudless_kb, region="us-east-1",
-        ),
-    ) if False else None  # The factory shape — let's use the direct path
-
+    # (Direct-backend path used below; the cloudless.VectorStore factory
+    # wrapper is exercised in other tests.)
     from cloudless.adapters.aws.vector_store import BedrockKBBackend
     backend = BedrockKBBackend(knowledge_base_id=cloudless_kb, region="us-east-1")
 

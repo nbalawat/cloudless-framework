@@ -14,7 +14,6 @@ import cloudless
 from cloudless.exceptions import GuardrailBlocked
 from cloudless.runtime.audit import InMemorySink, reset_sinks, set_sinks
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -24,7 +23,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("AWS credentials not configured")
         return False
 
@@ -44,7 +43,7 @@ def guardrail_id(aws_available):
             if g.get("name") == name:
                 yield g["id"]
                 return
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     # Create fresh
@@ -67,7 +66,7 @@ def guardrail_id(aws_available):
                 ],
             },
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         pytest.skip(f"could not create guardrail: {e}")
 
     gid = resp["guardrailId"]
@@ -80,7 +79,7 @@ def guardrail_id(aws_available):
             got = client.get_guardrail(guardrailIdentifier=gid)
             if got.get("status") == "READY":
                 break
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         time.sleep(2)
 
@@ -89,7 +88,7 @@ def guardrail_id(aws_available):
     # Teardown
     try:
         client.delete_guardrail(guardrailIdentifier=gid)
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 

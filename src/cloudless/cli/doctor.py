@@ -18,16 +18,14 @@ Checks shipped here cover the recurring F1/F5/F15/F16/F19 gotchas:
 from __future__ import annotations
 
 import importlib
-import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from cloudless._version import __version__
-
 
 # ----------------------------- result types ----------------------------- #
 
@@ -82,7 +80,7 @@ def check_aws_cli_age() -> CheckResult:
         )
     try:
         out = subprocess.check_output([exe, "--version"], text=True, timeout=5)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult("aws-cli-age", "WARN", f"could not run aws --version: {e}")
     # aws-cli reports "aws-cli/2.X.Y Python/..."
     import re
@@ -128,7 +126,7 @@ def check_aws_creds_resolve() -> CheckResult:
         )
     except ImportError:
         return CheckResult("aws-credentials", "WARN", "boto3 not installed")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult(
             "aws-credentials", "WARN",
             f"could not resolve AWS credentials: {e}",
@@ -149,7 +147,7 @@ def check_bedrock_inference_profile() -> CheckResult:
             "bedrock-inference-profile", "PASS",
             f"nova-micro resolves to {alias.model_id}",
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult("bedrock-inference-profile", "WARN", str(e))
 
 
@@ -165,14 +163,14 @@ def check_anthropic_streaming() -> CheckResult:
                 f"{', '.join(unsafe)} streaming requires Anthropic use-case form (F15)",
             )
         return CheckResult("anthropic-streaming", "PASS", "no Anthropic models in default lane")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult("anthropic-streaming", "WARN", str(e))
 
 
 def check_gcp_creds() -> CheckResult:
     try:
         import google.auth
-        creds, project = google.auth.default()
+        _creds, project = google.auth.default()
         if not project:
             return CheckResult(
                 "gcp-credentials", "WARN",
@@ -184,7 +182,7 @@ def check_gcp_creds() -> CheckResult:
         )
     except ImportError:
         return CheckResult("gcp-credentials", "WARN", "google-auth not installed")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult("gcp-credentials", "WARN", f"GCP ADC not resolved: {e}")
 
 
@@ -211,13 +209,13 @@ def check_pre_pypi_wheel() -> CheckResult:
         import cloudless
         pkg_dir = Path(cloudless.__file__).resolve().parent
         if "site-packages" in pkg_dir.parts:
-            return CheckResult("pre-pypi-wheel", "PASS", f"cloudless installed in site-packages")
+            return CheckResult("pre-pypi-wheel", "PASS", "cloudless installed in site-packages")
         return CheckResult(
             "pre-pypi-wheel", "WARN",
             f"cloudless loaded from {pkg_dir} (not site-packages). "
             f"Deploy adapters need a wheel — make sure wheelhouse/ is built (F17)",
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult("pre-pypi-wheel", "WARN", str(e))
 
 

@@ -12,11 +12,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from cloudless.runtime.tasks import TaskRecord
-
 
 SCOPE_KEY = "cloudless_task_token"
 
@@ -78,16 +76,16 @@ class MemoryBankTaskStore:
         # will pick up the latest fact (replay-safe).
         self._client.create_memory(request=request)
 
-    def get(self, resume_token: str) -> Optional[TaskRecord]:
+    def get(self, resume_token: str) -> TaskRecord | None:
         from google.cloud import aiplatform_v1beta1 as v1b
         filter_str = f'scope.{SCOPE_KEY}="{resume_token}"'
         request = v1b.ListMemoriesRequest(parent=self.agent_engine_name, filter=filter_str)
-        latest: Optional[TaskRecord] = None
+        latest: TaskRecord | None = None
         latest_time = None
         for mem in self._client.list_memories(request=request):
             try:
                 rec = self._decode(mem.fact)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
             create_time = getattr(mem, "create_time", None)
             if latest is None or (create_time and (latest_time is None or create_time > latest_time)):
@@ -95,7 +93,7 @@ class MemoryBankTaskStore:
                 latest_time = create_time
         return latest
 
-    def resolve(self, resume_token: str, approval: dict) -> Optional[TaskRecord]:
+    def resolve(self, resume_token: str, approval: dict) -> TaskRecord | None:
         rec = self.get(resume_token)
         if rec is None or rec.resolved:
             return None
@@ -112,11 +110,12 @@ class MemoryBankTaskStore:
         for mem in self._client.list_memories(request=request):
             try:
                 self._client.delete_memory(name=mem.name)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
     def list_active(self) -> list[TaskRecord]:
         import time as _t
+
         from google.cloud import aiplatform_v1beta1 as v1b
         # All memories under our parent with scope key set.
         # Memory Bank's filter syntax doesn't easily support "key exists",
@@ -129,7 +128,7 @@ class MemoryBankTaskStore:
                 continue
             try:
                 rec = self._decode(mem.fact)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
             records[rec.resume_token] = rec
         now = _t.time()

@@ -5,8 +5,16 @@ Each framework gets a `cloudless.<Framework>Agent` base class that:
   - Implements the abstract `query()` by driving the framework
   - Translates framework-native events to `cloudless.chunks.Chunk`
 
-Per Q5 framework rollout: LangGraph + Strands at v1 baseline,
-ADK + MAF in later milestones.
+The five supported frameworks:
+  - LangGraph (cloudless.LangGraphAgent)
+  - Strands Agents (cloudless.StrandsAgent)
+  - Google ADK (cloudless.ADKAgent)
+  - Anthropic Claude Agent SDK (cloudless.ClaudeAgentSDKAgent)
+  - Microsoft Agent Framework (cloudless.MAFAgent)
+
+Each adapter import is wrapped in try/except so missing optional
+dependencies don't break the package — the corresponding attribute is
+None when the framework's extra isn't installed.
 """
 from __future__ import annotations
 
@@ -20,4 +28,23 @@ try:
 except ImportError:  # strands extra not installed
     StrandsAgent = None  # type: ignore[assignment,misc]
 
-__all__ = ["LangGraphAgent", "StrandsAgent"]
+# ADKAgent has no eager import-time dependency on google-adk — the SDK
+# is loaded inside `query()` / `_runner()`. The module imports cleanly
+# whether or not the extra is installed.
+from cloudless.adapters.frameworks.adk import ADKAgent
+
+# Same lazy strategy for Claude SDK + MAF.
+from cloudless.adapters.frameworks.claude_sdk import (
+    ClaudeAgentSDKAgent,
+    ClaudeSDKAgent,
+)
+from cloudless.adapters.frameworks.maf import MAFAgent
+
+__all__ = [
+    "ADKAgent",
+    "ClaudeAgentSDKAgent",
+    "ClaudeSDKAgent",
+    "LangGraphAgent",
+    "MAFAgent",
+    "StrandsAgent",
+]

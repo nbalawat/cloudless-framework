@@ -9,13 +9,10 @@ not just unit-mocked. Cost: ~$0.0001 (Bedrock Nova Micro inference).
 """
 from __future__ import annotations
 
-import os
-
 import pytest
 
 import cloudless
 from cloudless.runtime import InMemoryContext
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -27,7 +24,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -38,7 +35,7 @@ async def test_langgraph_agent_runs_against_real_bedrock_nova_micro(aws_availabl
 
     # Defer imports to keep the test discoverable without langgraph installed
     from langchain.chat_models import init_chat_model
-    from langgraph.graph import StateGraph, START, END
+    from langgraph.graph import END, START, StateGraph
     from typing_extensions import TypedDict
 
     class State(TypedDict):

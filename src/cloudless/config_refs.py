@@ -19,13 +19,11 @@ Unknown refs raise InvalidInputError so typos fail loudly at startup.
 """
 from __future__ import annotations
 
-import copy
 import os
 import re
 from typing import Any
 
 from cloudless.exceptions import InvalidInputError
-
 
 _REF_RE = re.compile(r"\$\{(secret|env):([^:}]+)(?::([^}]*))?\}")
 
@@ -88,5 +86,5 @@ def _resolve_secret(name: str, *, secrets: Any, default: str | None) -> str | No
         s = _secrets_singleton
     try:
         return s.get(name)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return default

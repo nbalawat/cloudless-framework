@@ -7,6 +7,12 @@ Surface:
 
 Tied to cloudless.eval CLI commands in cloudless.cli.eval.
 """
+from cloudless.eval.metrics import (
+    Metric,
+    contains_substring,
+    llm_judge,
+    regex_match,
+)
 from cloudless.eval.runner import (
     EvalCase,
     EvalDataset,
@@ -14,14 +20,15 @@ from cloudless.eval.runner import (
     EvalRun,
     run_eval,
 )
-from cloudless.eval.metrics import (
-    Metric,
-    contains_substring,
-    llm_judge,
-    regex_match,
-)
 
 __all__ = [
-    "EvalCase", "EvalDataset", "EvalResult", "EvalRun", "run_eval",
-    "Metric", "contains_substring", "regex_match", "llm_judge",
+    "EvalCase",
+    "EvalDataset",
+    "EvalResult",
+    "EvalRun",
+    "Metric",
+    "contains_substring",
+    "llm_judge",
+    "regex_match",
+    "run_eval",
 ]

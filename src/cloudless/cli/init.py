@@ -18,9 +18,7 @@ No cloud calls. Fully offline. Smoke-testable in unit tests.
 from __future__ import annotations
 
 import shutil
-import sys
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -33,7 +31,7 @@ def run(
     framework: str = "langgraph",
     cloud: str = "aws",
     force: bool = False,
-    target_dir: Optional[Path] = None,
+    target_dir: Path | None = None,
 ) -> int:
     """Create the project. Returns 0 on success, 1 on conflict, 2 on error."""
     base = (target_dir or Path.cwd()) / project_name
@@ -59,11 +57,11 @@ def run(
 
     _console.print(f"[green]✓[/] Created {base}/")
     _console.print()
-    _console.print(f"[bold]Next steps:[/]")
+    _console.print("[bold]Next steps:[/]")
     _console.print(f"  cd {project_name}")
-    _console.print(f"  python -m pip install -e .  [dim](or: uv pip install -e .)[/]")
-    _console.print(f"  python -m pytest tests/      [dim](runs the unit test)[/]")
-    _console.print(f"  [dim]# (cloudless deploy ships in M3)[/]")
+    _console.print("  python -m pip install -e .  [dim](or: uv pip install -e .)[/]")
+    _console.print("  python -m pytest tests/      [dim](runs the unit test)[/]")
+    _console.print("  [dim]# (cloudless deploy ships in M3)[/]")
     return 0
 
 

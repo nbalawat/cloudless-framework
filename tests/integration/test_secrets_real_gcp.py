@@ -8,7 +8,6 @@ import pytest
 
 import cloudless
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
@@ -25,7 +24,7 @@ def gcp_available(project) -> bool:
             request={"parent": f"projects/{project}"}
         )
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 

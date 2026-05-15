@@ -15,7 +15,7 @@ modules (different transport per cloud).
 """
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -31,11 +31,11 @@ class User(Protocol):
     """Stable principal ID. JWT `sub` claim or IAM principal ARN."""
 
     @property
-    def email(self) -> Optional[str]: ...
+    def email(self) -> str | None: ...
     """User email if available (from JWT). None for M2M / IAM principals."""
 
     @property
-    def team(self) -> Optional[str]: ...
+    def team(self) -> str | None: ...
     """Team tag for cost attribution (Q20)."""
 
 
@@ -51,9 +51,9 @@ class CostTracker(Protocol):
         """Sum-to-date for this session in USD."""
         ...
 
-    def attribute(self, *, team: Optional[str] = None,
-                  project: Optional[str] = None,
-                  feature: Optional[str] = None) -> None:
+    def attribute(self, *, team: str | None = None,
+                  project: str | None = None,
+                  feature: str | None = None) -> None:
         """Tag the current session for cost-attribution rollups.
 
         Tags propagate via the A2A `originating-attribution` header
@@ -126,7 +126,7 @@ class Context(Protocol):
     @property
     def session(self) -> Session: ...
     @property
-    def user(self) -> Optional[User]: ...
+    def user(self) -> User | None: ...
     @property
     def cost(self) -> CostTracker: ...
 
@@ -152,8 +152,8 @@ class _InMemorySession:
 
 
 class _InMemoryUser:
-    def __init__(self, user_id: str, email: Optional[str] = None,
-                 team: Optional[str] = None) -> None:
+    def __init__(self, user_id: str, email: str | None = None,
+                 team: str | None = None) -> None:
         self._id = user_id
         self._email = email
         self._team = team
@@ -163,11 +163,11 @@ class _InMemoryUser:
         return self._id
 
     @property
-    def email(self) -> Optional[str]:
+    def email(self) -> str | None:
         return self._email
 
     @property
-    def team(self) -> Optional[str]:
+    def team(self) -> str | None:
         return self._team
 
 
@@ -199,9 +199,9 @@ class _InMemoryCostTracker:
         )
         return own + self.imported_peer_usd
 
-    def attribute(self, *, team: Optional[str] = None,
-                  project: Optional[str] = None,
-                  feature: Optional[str] = None) -> None:
+    def attribute(self, *, team: str | None = None,
+                  project: str | None = None,
+                  feature: str | None = None) -> None:
         if team is not None:
             self.attribution["team"] = team
         if project is not None:
@@ -291,8 +291,8 @@ class InMemoryContext:
     def __init__(
         self,
         session_id: str = "test-session",
-        user: Optional[User] = None,
-        peer_responses: Optional[dict[str, Any]] = None,
+        user: User | None = None,
+        peer_responses: dict[str, Any] | None = None,
     ) -> None:
         self._session = _InMemorySession(session_id)
         self._user = user
@@ -305,7 +305,7 @@ class InMemoryContext:
         return self._session
 
     @property
-    def user(self) -> Optional[User]:
+    def user(self) -> User | None:
         return self._user
 
     @property

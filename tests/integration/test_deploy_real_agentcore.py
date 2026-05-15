@@ -18,14 +18,10 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import sys
-import tempfile
 import time
-from pathlib import Path
 
 import pytest
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -41,7 +37,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
@@ -55,7 +51,7 @@ async def test_deploy_hello_world_to_agentcore_and_invoke(
         pytest.skip("Set CLOUDLESS_RUN_DEPLOY_TESTS=1 to run (costs ~$0.02, takes ~3 min)")
 
     import boto3
-    import cloudless
+
     from cloudless.adapters.aws import deploy
 
     # 1. Scaffold a temp project
@@ -125,11 +121,11 @@ async def test_deploy_hello_world_to_agentcore_and_invoke(
         try:
             control.delete_agent_runtime_endpoint(
                 agentRuntimeId=runtime_id, endpointName="DEFAULT")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"[cleanup] endpoint delete failed: {e}")
         try:
             control.delete_agent_runtime(agentRuntimeId=runtime_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"[cleanup] runtime delete failed: {e}")
         # Drop the scaffolded sys.modules
         for mod in list(sys.modules):

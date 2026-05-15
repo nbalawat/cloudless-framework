@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import cloudless
-from cloudless.catalog.secrets import LocalFileBackend, Secrets, SecretsBackend
+from cloudless.catalog.secrets import LocalFileBackend, Secrets
 
 
 @pytest.fixture

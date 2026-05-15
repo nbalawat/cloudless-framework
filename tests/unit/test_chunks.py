@@ -6,7 +6,6 @@ from pydantic import ValidationError
 
 import cloudless
 from cloudless.chunks import (
-    Chunk,
     ErrorChunk,
     FinalChunk,
     ReasoningChunk,

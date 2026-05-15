@@ -13,7 +13,6 @@ import uuid
 
 import pytest
 
-
 pytestmark = [pytest.mark.integration]
 
 
@@ -23,7 +22,7 @@ def aws_available() -> bool:
         import boto3
         boto3.client("sts").get_caller_identity()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         pytest.skip("AWS credentials not configured")
         return False
 
@@ -52,8 +51,9 @@ def test_ensure_gateway_creates_and_finds(iam_role_arn):
     if os.environ.get("CLOUDLESS_RUN_GATEWAY_TESTS") != "1":
         pytest.skip("Set CLOUDLESS_RUN_GATEWAY_TESTS=1 (creates Gateway resource)")
 
-    from cloudless.adapters.aws.gateway import ensure_gateway
     import boto3
+
+    from cloudless.adapters.aws.gateway import ensure_gateway
 
     # Discover an existing Cognito pool for the CUSTOM_JWT authorizer config
     cognito = boto3.client("cognito-idp", region_name="us-east-1")
@@ -100,13 +100,14 @@ def test_ensure_gateway_creates_and_finds(iam_role_arn):
         if out1 is not None:
             try:
                 control.delete_gateway(gatewayIdentifier=out1["id"])
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
 
 def test_gateway_module_smoke(aws_available):
     """Smoke test: module imports, list_gateways works."""
     import boto3
+
     from cloudless.adapters.aws.gateway import ensure_gateway  # noqa
     control = boto3.client("bedrock-agentcore-control", region_name="us-east-1")
     # list_gateways may or may not return any — we just verify the API is callable
@@ -115,7 +116,7 @@ def test_gateway_module_smoke(aws_available):
         assert isinstance(result.get("gateways", result.get("items", [])), list)
     except control.exceptions.AccessDeniedException:
         pytest.skip("account doesn't have AgentCore Gateway access")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         # If the API simply isn't available in this region, that's OK
         if "AccessDenied" in str(e) or "not authorized" in str(e):
             pytest.skip(f"AgentCore Gateway not available: {e}")
