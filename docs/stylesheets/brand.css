@@ -43,22 +43,80 @@
 }
 
 /* ---------- Dark scheme ---------- */
+/* Targeting WCAG AA across all text classes — Material defaults are
+ * far too dim against our brand-dark background. We brighten the
+ * "--light" and "--lighter" tiers (used for nav, breadcrumbs, TOC) so
+ * chrome is readable, not just primary body text. */
 [data-md-color-scheme="cloudless-dark"] {
   --md-primary-fg-color:        #060d18;
   --md-primary-fg-color--dark:  #030711;
-  --md-primary-bg-color:        var(--cl-mist);
+  --md-primary-bg-color:        #FFFFFF;
 
   --md-accent-fg-color:         var(--cl-spark);
-  --md-accent-fg-color--transparent: rgba(255, 92, 57, 0.15);
+  --md-accent-fg-color--transparent: rgba(255, 92, 57, 0.2);
 
-  --md-default-fg-color:        var(--cl-mist);
-  --md-default-fg-color--light: #cbd5e1;
-  --md-default-fg-color--lighter: var(--cl-fog);
+  --md-default-fg-color:        #F4F7FB;   /* primary body — near-white */
+  --md-default-fg-color--light: #DCE5F0;   /* secondary (nav, sidebars) — bright */
+  --md-default-fg-color--lighter: #B8C5D6; /* tertiary (TOC dim, footnotes) — readable */
+  --md-default-fg-color--lightest: #768FAD;
   --md-default-bg-color:        #0a1422;
+  --md-default-bg-color--light: #131c2e;
 
-  --md-typeset-a-color:         #60A5FA;
-  --md-code-bg-color:           #131c2e;
-  --md-code-fg-color:           var(--cl-mist);
+  --md-typeset-a-color:         #8FB8FF;   /* link blue — brighter than #60A5FA */
+  --md-code-bg-color:           #1a253e;
+  --md-code-fg-color:           #F8FAFC;
+
+  /* Top tabs nav (Home / Getting started / Concepts / ...) */
+  --md-typeset-mark-color:      rgba(255, 92, 57, 0.3);
+}
+
+/* Top-tabs nav — Material uses --md-primary-bg-color as text color. */
+[data-md-color-scheme="cloudless-dark"] .md-tabs__link {
+  color: #DCE5F0;
+  opacity: 1;
+}
+[data-md-color-scheme="cloudless-dark"] .md-tabs__link:hover,
+[data-md-color-scheme="cloudless-dark"] .md-tabs__link--active {
+  color: #FFFFFF;
+}
+
+/* Header strip (logo + site title) — pure white on the dark bar. */
+[data-md-color-scheme="cloudless-dark"] .md-header__title,
+[data-md-color-scheme="cloudless-dark"] .md-header__topic {
+  color: #FFFFFF;
+}
+
+/* Left sidebar (Guides → Deploy to AWS / GCP / ...) — chrome was too dim. */
+[data-md-color-scheme="cloudless-dark"] .md-nav__link,
+[data-md-color-scheme="cloudless-dark"] .md-nav__title {
+  color: #DCE5F0;
+}
+[data-md-color-scheme="cloudless-dark"] .md-nav__link--active,
+[data-md-color-scheme="cloudless-dark"] .md-nav__link[aria-current="true"] {
+  color: #8FB8FF;
+  font-weight: 600;
+}
+
+/* Right "On this page" TOC — was nearly invisible. */
+[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link {
+  color: #B8C5D6;
+}
+[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link--active {
+  color: #FFFFFF;
+}
+
+/* Inline code in dark mode — bump contrast. */
+[data-md-color-scheme="cloudless-dark"] .md-typeset code {
+  background-color: #1a253e;
+  color: #F8FAFC;
+}
+
+/* Breadcrumbs ("Home > Guides") were also washed out. */
+[data-md-color-scheme="cloudless-dark"] .md-path {
+  color: #B8C5D6;
+}
+[data-md-color-scheme="cloudless-dark"] .md-path a:hover {
+  color: #FFFFFF;
 }
 
 /* ---------- Typography ---------- */
