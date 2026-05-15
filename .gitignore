@@ -14,3 +14,4 @@ __pycache__/
 # Spike secrets (Cognito client secrets, ephemeral tokens)
 spikes/**/cognito_state.json
 spikes/**/last_token.txt
+site/

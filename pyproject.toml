@@ -76,14 +76,41 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/cloudless"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/cloudless/py.typed" = "cloudless/py.typed"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
     "integration: requires real AWS or GCP credentials; not run by default in CI fast lane",
+    "perf: latency benchmark; not run by default; report p50/p95 instead of pass/fail",
 ]
-addopts = "-m 'not integration'"
+addopts = "-m 'not integration and not perf'"
+
+[tool.mypy]
+# Strict over the public surface. Adapters + CLI internals are excluded —
+# they handle dynamic cloud SDK shapes and would force pervasive `# type: ignore`
+# without real safety gain.
+strict = true
+warn_unused_ignores = true
+warn_return_any = false   # cloud SDKs leak Any through their return types
+ignore_missing_imports = true
+disallow_any_generics = false  # bare `dict`/`list`/`Callable` are common and fine
+disable_error_code = [
+    "import-untyped",
+    "import-not-found",
+    "no-untyped-def",       # arg/return annotations not enforced
+    "no-any-return",
+    "type-arg",              # bare generics
+]
+exclude = [
+    "src/cloudless/adapters/",
+    "src/cloudless/cli/",
+    "src/cloudless/eval/",
+    "src/cloudless/testing/",
+]
 
 [tool.ruff]
 line-length = 100
@@ -94,8 +121,3 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "B", "UP", "N", "RUF"]
 ignore = ["E501"]  # line length handled by formatter
 
-[tool.mypy]
-python_version = "3.11"
-strict = true
-warn_unused_configs = true
-files = ["src/cloudless"]

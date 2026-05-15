@@ -27,27 +27,49 @@ def gcp_available() -> bool:
 
 @pytest.fixture(scope="module")
 def memory_bank_parent(gcp_available):
-    """Provision a minimal Agent Engine whose memory bank we can use as parent.
+    """Resolve an Agent Engine resource name to use as the Memory Bank parent.
 
-    Gated by CLOUDLESS_RUN_DEPLOY_TESTS=1 because Agent Engine creation
-    takes ~2-3 minutes per run.
+    Resolution order:
+      1. CLOUDLESS_MEMORY_BANK_PARENT env var (full resource name)
+      2. The first existing Agent Engine in the project (reused — no creation cost)
+      3. Create a fresh one (CLOUDLESS_RUN_DEPLOY_TESTS=1 required; takes ~3 min,
+         and is known to time out under Vertex slot contention)
+
+    Reusing an existing engine sidesteps the 11-minute creation timeout
+    documented in docs/CERTIFICATION.md.
     """
     if not gcp_available:
         pytest.skip("GCP credentials not configured")
-    if os.environ.get("CLOUDLESS_RUN_DEPLOY_TESTS") != "1":
-        pytest.skip("Set CLOUDLESS_RUN_DEPLOY_TESTS=1 (creates Agent Engine, ~3 min)")
 
     import vertexai
     from vertexai import agent_engines
 
     project = os.environ.get("CLOUDLESS_GCP_PROJECT", "agentic-experiments")
+    vertexai.init(project=project, location="us-central1")
+
+    # 1. Explicit env override
+    env_parent = os.environ.get("CLOUDLESS_MEMORY_BANK_PARENT")
+    if env_parent:
+        yield env_parent
+        return
+
+    # 2. Reuse an existing engine if available
+    existing = list(agent_engines.list())
+    if existing:
+        yield existing[0].resource_name
+        return
+
+    # 3. Last resort — create one (slow, may time out)
+    if os.environ.get("CLOUDLESS_RUN_DEPLOY_TESTS") != "1":
+        pytest.skip(
+            "no existing Agent Engine in project and CLOUDLESS_RUN_DEPLOY_TESTS!=1"
+        )
+
     vertexai.init(
         project=project, location="us-central1",
         staging_bucket=f"gs://cloudless-staging-{project}",
     )
 
-    # Pickle-by-value safety net (mirrors GCP deploy adapter pattern)
-    import cloudpickle
     class _MinAgent:
         def query(self, prompt: str) -> dict:
             return {"echo": prompt}
@@ -63,11 +85,11 @@ def memory_bank_parent(gcp_available):
             description="cloudless Memory Bank integration test parent",
         )
     except Exception as e:  # noqa: BLE001
-        pytest.skip(f"could not create Agent Engine: {e}")
+        pytest.fail(f"could not create Agent Engine: {e}")
 
     yield remote.resource_name
 
-    # Teardown
+    # Teardown only if we created it
     try:
         agent_engines.delete(remote.resource_name, force=True)
     except Exception:  # noqa: BLE001

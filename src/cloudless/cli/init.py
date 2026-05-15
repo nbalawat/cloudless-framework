@@ -49,7 +49,9 @@ def run(
 
     base.mkdir(parents=True)
 
-    files = _generate_files(project_name, framework=framework, cloud=cloud)
+    # cloudless.yaml requires a kebab-case identifier — derive from basename.
+    project_slug = base.name
+    files = _generate_files(project_slug, framework=framework, cloud=cloud)
     for relpath, content in files.items():
         path = base / relpath
         path.parent.mkdir(parents=True, exist_ok=True)

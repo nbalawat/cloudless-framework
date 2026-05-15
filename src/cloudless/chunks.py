@@ -81,6 +81,29 @@ class FinalChunk(_ChunkBase):
     state: Optional[dict[str, Any]] = None
 
 
+class PauseChunk(_ChunkBase):
+    """HITL pause point (Q17 long-running tasks).
+
+    The agent yields this to await human approval before proceeding.
+    Runtime persists the task state under `resume_token`; a subsequent
+    `cloudless.runtime.tasks.resume(resume_token, approval)` continues
+    the agent from this point.
+    """
+
+    kind: str = Field(default="pause", frozen=True)
+    resume_token: str
+    """Opaque token identifying this pause point. Treat as a session ID."""
+
+    reason: str = ""
+    """Why the agent paused (e.g., "awaiting refund approval > $1000")."""
+
+    pending_action: Optional[dict[str, Any]] = None
+    """Snapshot of what the agent intends to do once resumed."""
+
+    expires_at: Optional[float] = None
+    """Unix epoch seconds for TTL (default: 24h post-pause)."""
+
+
 class ErrorChunk(_ChunkBase):
     """Recoverable error mid-stream.
 
@@ -102,6 +125,7 @@ Chunk = Union[
     ToolResultChunk,
     ReasoningChunk,
     StateChunk,
+    PauseChunk,
     FinalChunk,
     ErrorChunk,
 ]

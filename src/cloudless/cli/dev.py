@@ -66,6 +66,10 @@ def _discover_agent_class(agent_name: str, agents_dir: Path) -> type:
 def _build_local_app(agent_class: type, *, session_id: str = "dev-session"):
     """Wrap the user's agent class in a BedrockAgentCoreApp for local serving.
 
+    Two routes:
+      POST /invocations         — returns aggregated JSON {chunks, final_text, agent}
+      POST /invocations/stream  — returns Server-Sent Events; one chunk per SSE event
+
     Returns the app object (.run() to start uvicorn).
     """
     # Defer the import so `cloudless dev --help` works without the AWS extra.
@@ -87,7 +91,50 @@ def _build_local_app(agent_class: type, *, session_id: str = "dev-session"):
         return {"chunks": chunks, "final_text": final_text,
                 "agent": agent_class.__cloudless_metadata__.name}
 
+    # SSE streaming route — adds /invocations/stream
+    _attach_sse_route(app, instance, agent_class, session_id=session_id)
     return app
+
+
+def _attach_sse_route(app, instance, agent_class, *, session_id: str) -> None:
+    """Mount POST /invocations/stream as a Server-Sent Events endpoint."""
+    import json
+    from starlette.requests import Request
+    from starlette.responses import StreamingResponse
+    from starlette.routing import Route
+
+    async def _stream_handler(request: Request) -> StreamingResponse:
+        try:
+            payload = await request.json()
+        except Exception:  # noqa: BLE001
+            payload = {}
+        prompt = payload.get("prompt", "")
+
+        async def _events():
+            ctx = cloudless.InMemoryContext(session_id=session_id)
+            try:
+                async for chunk in instance.query(ctx, prompt):
+                    data = json.dumps(chunk.model_dump())
+                    # SSE format: "event: <kind>\ndata: <json>\n\n"
+                    yield f"event: {chunk.kind}\ndata: {data}\n\n".encode()
+            except Exception as e:  # noqa: BLE001
+                err = {"kind": "error", "error": str(e), "recoverable": False}
+                yield f"event: error\ndata: {json.dumps(err)}\n\n".encode()
+            yield b"event: done\ndata: {}\n\n"
+
+        return StreamingResponse(_events(), media_type="text/event-stream",
+                                  headers={
+                                      "Cache-Control": "no-cache",
+                                      "X-Accel-Buffering": "no",
+                                  })
+
+    # BedrockAgentCoreApp IS a Starlette app — register the route directly.
+    if hasattr(app, "add_route"):
+        app.add_route("/invocations/stream", _stream_handler, methods=["POST"])
+    elif hasattr(app, "router"):
+        app.router.routes.append(
+            Route("/invocations/stream", _stream_handler, methods=["POST"]),
+        )
 
 
 def run(
@@ -97,14 +144,35 @@ def run(
     port: int = 8080,
     project_root: Optional[Path] = None,
     block: bool = True,
+    record_cassette: Optional[str] = None,
+    replay_cassette: Optional[str] = None,
+    reload: bool = False,
 ) -> int:
-    """Entry point for `cloudless dev <agent>`."""
+    """Entry point for `cloudless dev <agent>`.
+
+    Args:
+        record_cassette: Path to cassette JSONL. Real LLM calls + persist.
+        replay_cassette: Path to cassette JSONL. Replay-only mode.
+
+    Mutually exclusive: pass at most one of record/replay.
+    """
+    if record_cassette and replay_cassette:
+        _console.print("[red]✗[/] --record and --replay are mutually exclusive")
+        return 2
+
     project_root = (project_root or Path.cwd()).resolve()
 
     cfg_path = project_root / "cloudless.yaml"
     if cfg_path.is_file():
-        cfg = yaml.safe_load(cfg_path.read_text()) or {}
-        if agent_name not in (cfg.get("agents") or {}):
+        from cloudless.config import ConfigValidationError, load as load_cfg
+        try:
+            cfg = load_cfg(cfg_path)
+        except ConfigValidationError as e:
+            _console.print(f"[red]✗[/] cloudless.yaml is invalid:")
+            for err in e.errors:
+                _console.print(f"   - {err}")
+            return 2
+        if agent_name not in cfg.agents:
             _console.print(
                 f"[yellow]![/] Agent {agent_name!r} not declared in cloudless.yaml. "
                 f"Running anyway."
@@ -126,6 +194,10 @@ def run(
                    f"framework=[cyan]{meta.framework or 'custom'}[/]")
     _console.print(f"  serving on  http://{host}:{port}/invocations")
     _console.print(f"  health      http://{host}:{port}/ping")
+    if record_cassette:
+        _console.print(f"  cassette    [yellow]recording[/] → {record_cassette}")
+    if replay_cassette:
+        _console.print(f"  cassette    [green]replaying[/] ← {replay_cassette}")
     _console.print(f"  Ctrl-C to stop")
 
     app = _build_local_app(agent_class)
@@ -139,5 +211,98 @@ def run(
     import uvicorn
     # The BedrockAgentCoreApp wraps a Starlette app on .app
     starlette_app = getattr(app, "app", None) or app
+
+    if reload:
+        return _run_with_reload(
+            agent_name=agent_name, host=host, port=port,
+            project_root=project_root, src_agents=src_agents,
+            record_cassette=record_cassette, replay_cassette=replay_cassette,
+        )
+
+    if record_cassette or replay_cassette:
+        from cloudless.testing.cassettes import CassetteMode, llm_cassette
+        cassette_path = record_cassette or replay_cassette
+        cassette_mode = CassetteMode.RECORD if record_cassette else CassetteMode.REPLAY
+        with llm_cassette(cassette_path, mode=cassette_mode):
+            uvicorn.run(starlette_app, host=host, port=port, log_level="info")
+        return 0
+
     uvicorn.run(starlette_app, host=host, port=port, log_level="info")
+    return 0
+
+
+# --------------------------------------------------------------------- #
+# --reload supervisor — parent process watches src/agents for mtime
+# changes and re-spawns the child server.
+# --------------------------------------------------------------------- #
+
+
+def _scan_mtimes(root: Path) -> dict[str, float]:
+    """Return a {filepath: mtime} snapshot of every .py file under `root`."""
+    out: dict[str, float] = {}
+    if not root.is_dir():
+        return out
+    for f in root.rglob("*.py"):
+        try:
+            out[str(f)] = f.stat().st_mtime
+        except OSError:
+            pass
+    return out
+
+
+def _run_with_reload(
+    *,
+    agent_name: str,
+    host: str,
+    port: int,
+    project_root: Path,
+    src_agents: Path,
+    record_cassette: Optional[str],
+    replay_cassette: Optional[str],
+) -> int:
+    """Supervisor: spawn `cloudless dev <agent>` in a child; respawn on file change."""
+    import os
+    import signal
+    import subprocess
+    import sys
+    import time
+
+    cmd = [
+        sys.executable, "-m", "cloudless.cli.main", "dev", agent_name,
+        "--host", host, "--port", str(port),
+    ]
+    if record_cassette:
+        cmd += ["--record", record_cassette]
+    elif replay_cassette:
+        cmd += ["--replay", replay_cassette]
+
+    _console.print("[bold]cloudless dev[/]  [yellow]--reload enabled[/]")
+
+    proc: Optional[subprocess.Popen] = None
+    mtimes = _scan_mtimes(src_agents)
+    try:
+        proc = subprocess.Popen(cmd, cwd=str(project_root), env=dict(os.environ))
+        while True:
+            time.sleep(0.5)
+            if proc.poll() is not None:
+                return proc.returncode or 1
+            current = _scan_mtimes(src_agents)
+            if current != mtimes:
+                _console.print("[yellow]↻[/] agent source changed — reloading")
+                proc.send_signal(signal.SIGINT)
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                proc = subprocess.Popen(cmd, cwd=str(project_root), env=dict(os.environ))
+                mtimes = current
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if proc is not None and proc.poll() is None:
+            proc.send_signal(signal.SIGINT)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
     return 0

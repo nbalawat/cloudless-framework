@@ -77,11 +77,22 @@ class LLMJudge:
         rubric: str,
         model: str = "nova-pro",
         region: str = "us-east-1",
+        project: str | None = None,
+        location: str | None = None,
         pass_threshold: float = 0.7,
     ) -> None:
+        """Generic LLM-as-judge metric.
+
+        `model` may be ANY alias the LLM primitive accepts:
+          - Bedrock: 'nova-pro', 'claude-haiku', 'claude-sonnet', ...
+          - Gemini:  'gemini-flash', 'gemini-pro'
+          - Raw model IDs are also accepted.
+        """
         self.rubric = rubric
         self.model = model
         self.region = region
+        self.project = project
+        self.location = location
         self.pass_threshold = pass_threshold
 
     async def evaluate(self, *, case, response: str) -> MetricScore:
@@ -95,7 +106,16 @@ class LLMJudge:
             f"Reply with ONLY a JSON object: "
             f'{{"score": <float>, "reason": "<one sentence>"}}'
         )
-        llm = cloudless.LLM(model=self.model, region=self.region)
+        # Resolve provider to pass the right kwargs
+        from cloudless.catalog.llm import resolve_model
+        alias = resolve_model(self.model)
+        kwargs: dict = {"model": self.model, "region": self.region}
+        if alias.provider == "gemini":
+            if self.project:
+                kwargs["project"] = self.project
+            if self.location:
+                kwargs["location"] = self.location
+        llm = cloudless.LLM(**kwargs)
         raw = await llm.invoke(prompt, max_tokens=256)
         # Best-effort JSON parse
         import json

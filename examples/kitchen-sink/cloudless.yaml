@@ -1,0 +1,27 @@
+# Kitchen-sink example — exercises every cloudless primitive.
+# Deploys to AWS by default; swap default_cloud to gcp for GCP deploy.
+project: kitchen-sink
+default_cloud: aws
+
+clouds:
+  aws:
+    accounts:
+      dev: {region: us-east-1}
+
+environments:
+  dev: {aws: dev}
+
+service_catalog:
+  llm: {provider: bedrock, model: nova-micro}
+  memory: {strategy: semantic, retention_days: 90}
+  embeddings: {provider: bedrock, model: titan-v2}
+
+policies:
+  cost_cap_usd_per_session: 1.0
+  retries: {attempts: 3, backoff_seconds: 0.25}
+
+agents:
+  concierge:
+    cloud: aws
+    framework: langgraph
+    interfaces: [http, a2a]

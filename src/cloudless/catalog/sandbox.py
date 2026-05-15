@@ -46,7 +46,24 @@ class SandboxBackend(Protocol):
 
 
 class LocalSubprocessBackend:
-    """Run code via a local subprocess. SECURITY: no isolation."""
+    """Run code via a local subprocess. SECURITY: no isolation.
+
+    Per-instance workspace: a temp directory created lazily on first
+    upload_file or execute. The subprocess runs with this dir as CWD so
+    `open("data.csv")` resolves to the workspace.
+    """
+
+    def __init__(self) -> None:
+        self._workspace: Path | None = None
+
+    def _ws(self) -> Path:
+        if self._workspace is None:
+            self._workspace = Path(tempfile.mkdtemp(prefix="cloudless-sandbox-"))
+        return self._workspace
+
+    @property
+    def workspace(self) -> Path:
+        return self._ws()
 
     async def execute(
         self, *, code: str, language: str = "python",
@@ -65,6 +82,7 @@ class LocalSubprocessBackend:
             proc = await asyncio.create_subprocess_exec(
                 sys.executable, script,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                cwd=str(self._ws()),
             )
             try:
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
@@ -82,8 +100,24 @@ class LocalSubprocessBackend:
             except OSError:
                 pass
 
+    async def upload_file(self, *, name: str, content: bytes) -> str:
+        path = self._ws() / name
+        path.write_bytes(content)
+        return str(path)
+
+    async def download_file(self, *, name: str) -> bytes:
+        path = self._ws() / name
+        if not path.is_file():
+            raise FileNotFoundError(f"no such file in sandbox: {name!r}")
+        return path.read_bytes()
+
     async def close(self) -> None:
-        pass
+        if self._workspace and self._workspace.exists():
+            try:
+                shutil.rmtree(self._workspace)
+            except OSError:
+                pass
+        self._workspace = None
 
 
 # --------------------------------------------------------------------- #
@@ -138,3 +172,45 @@ class Sandbox:
 
     async def close(self) -> None:
         await self._backend.close()
+
+    # ------------------------------------------------------------------ #
+    # File transfer (M2+ on AgentCore; LocalSubprocessBackend = tempdir)
+    # ------------------------------------------------------------------ #
+
+    async def upload_file(self, *, name: str, content: bytes) -> str:
+        """Upload `content` into the sandbox under `name`. Returns the
+        absolute path inside the sandbox (relative paths from `execute` resolve
+        from the workspace root).
+
+        Backend support:
+          - LocalSubprocessBackend: writes to a per-sandbox tempdir, available
+            via `Sandbox.workspace`.
+          - CodeInterpreterBackend (AWS): writes via the Code Interpreter
+            file API (`/sandbox/files/<name>`).
+        """
+        if not hasattr(self._backend, "upload_file"):
+            raise NotImplementedError(
+                f"backend {type(self._backend).__name__} does not support upload_file"
+            )
+        return await self._backend.upload_file(name=name, content=content)
+
+    async def download_file(self, *, name: str) -> bytes:
+        """Download a file produced by sandbox execution."""
+        if not hasattr(self._backend, "download_file"):
+            raise NotImplementedError(
+                f"backend {type(self._backend).__name__} does not support download_file"
+            )
+        return await self._backend.download_file(name=name)
+
+    async def execute_long_running(
+        self, *, code: str, language: str = "python", max_seconds: float = 3600.0,
+    ) -> SandboxResult:
+        """Execute with a long timeout (default 1 hour, up to AgentCore's 8h max).
+
+        Use for batch data processing, long-running ML jobs. Local backend
+        respects the same timeout. AgentCore CodeInterpreter supports up to
+        8 hours per session.
+        """
+        return await self._backend.execute(
+            code=code, language=language, timeout_s=max_seconds,
+        )

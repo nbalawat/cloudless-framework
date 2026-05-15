@@ -135,26 +135,75 @@ class LLM:
         *,
         region: str = "us-east-1",
         client: Any = None,
+        project: Optional[str] = None,
+        location: Optional[str] = None,
+        extended_thinking: bool = False,
+        guardrail_id: Optional[str] = None,
+        guardrail_version: Optional[str] = "DRAFT",
+        safety_settings: Optional[list[dict]] = None,
+        model_armor_template: Optional[str] = None,
+        grounding: bool | str = False,
+        cached_content: Optional[str] = None,
     ) -> None:
         """
         Args:
             model: Logical alias or raw model ID. See DEFAULT_ALIASES.
-            region: Cloud region. AWS default us-east-1.
-            client: Optional pre-built boto3 client (for testing).
+            region: AWS region for Bedrock. Default us-east-1.
+            client: Optional pre-built boto3 client (for testing Bedrock path).
+            project: GCP project for Gemini. Defaults to env CLOUDLESS_GCP_PROJECT
+                or google.auth.default() project.
+            location: GCP location for Gemini. Default us-central1.
+            extended_thinking: If True, allow Gemini 2.5 to allocate thinking
+                budget from `max_tokens` (F2). Default False.
         """
         self.alias = resolve_model(model)
         self.region = region
+        self.guardrail_id = guardrail_id
+        self.guardrail_version = guardrail_version
+        self._backend: Any = None  # GeminiBackend instance for provider="gemini"
 
         if self.alias.provider == "bedrock":
             # Defer the boto3 import so cloudless can be imported without aws extras.
             import boto3
             self._client = client or boto3.client("bedrock-runtime", region_name=region)
         elif self.alias.provider == "gemini":
-            raise NotImplementedError(
-                "Gemini LLM provider ships in M2. Use a Bedrock alias (e.g. nova-micro) for now."
+            from cloudless.adapters.gcp.llm import GeminiBackend
+            resolved_project = project or self._resolve_gcp_project()
+            resolved_location = location or "us-central1"
+            self._backend = GeminiBackend(
+                model_id=self.alias.model_id,
+                project=resolved_project,
+                location=resolved_location,
+                extended_thinking=extended_thinking,
+                safety_settings=safety_settings,
+                model_armor_template=model_armor_template,
+                grounding=grounding,
+                cached_content=cached_content,
             )
         else:
             raise InvalidInputError(f"Unknown provider {self.alias.provider!r}")
+
+    @staticmethod
+    def _resolve_gcp_project() -> str:
+        """Resolve GCP project from env or ADC."""
+        import os
+        env_project = (
+            os.environ.get("CLOUDLESS_GCP_PROJECT")
+            or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            or os.environ.get("GCLOUD_PROJECT")
+        )
+        if env_project:
+            return env_project
+        try:
+            import google.auth
+            _, project = google.auth.default()
+            if project:
+                return project
+        except Exception:  # noqa: BLE001
+            pass
+        raise InvalidInputError(
+            "GCP project required for Gemini. Set CLOUDLESS_GCP_PROJECT or pass project=..."
+        )
 
     # ------------------------------------------------------------------ #
     # Sync request/response
@@ -167,6 +216,9 @@ class LLM:
         system: Optional[str] = None,
         max_tokens: int = 512,
         ctx: Any = None,
+        images: Optional[list[dict]] = None,
+        videos: Optional[list[dict]] = None,
+        audios: Optional[list[dict]] = None,
     ) -> str:
         """Single-shot request/response. Returns the assistant's text reply.
 
@@ -176,6 +228,13 @@ class LLM:
             max_tokens: Cap on output tokens. Default 512 — generous enough
                 that Gemini 2.5's thinking budget doesn't starve output (F2).
             ctx: Optional `cloudless.Context` for cost-attribution recording.
+            images: Optional list of {data: bytes, mime_type: str} dicts. Each
+                image is sent alongside the text prompt. Bedrock supports this
+                on Nova Lite/Pro and Claude; Gemini supports it on every model.
+            videos: Optional list of {data: bytes, mime_type: str} dicts. Gemini
+                supports inline video; Bedrock Nova Lite/Pro support video.
+            audios: Optional list of {data: bytes, mime_type: str} dicts. Gemini
+                supports inline audio (voice notes, music samples).
 
         Raises:
             AuthenticationError: Bedrock returned 401/403.
@@ -183,39 +242,117 @@ class LLM:
             CloudlessTimeoutError: Boto3 read timeout.
             InvalidInputError: Bedrock returned 400.
         """
-        messages = [{"role": "user", "content": [{"text": prompt}]}]
-        kwargs: dict[str, Any] = {
-            "modelId": self.alias.model_id,
-            "messages": messages,
-            "inferenceConfig": {"maxTokens": max_tokens},
-        }
-        if system:
-            kwargs["system"] = [{"text": system}]
+        from cloudless.runtime.policy import get_registry
+        from cloudless.runtime import tracing
+        reg = get_registry()
+        prompt = reg.run("before_llm", prompt=prompt, model=self.alias.model_id, ctx=ctx)["prompt"]
 
-        try:
-            resp = self._client.converse(**kwargs)
-        except Exception as e:
-            raise self._translate_exception(e) from e
+        with tracing.span(
+            "llm.invoke",
+            **{
+                "gen_ai.system": "bedrock" if self.alias.provider == "bedrock" else "vertex",
+                "gen_ai.request.model": self.alias.model_id,
+                "gen_ai.request.max_tokens": max_tokens,
+            },
+        ):
+            try:
+                if self._backend is not None:
+                    text = await self._backend.invoke(
+                        prompt, system=system, max_tokens=max_tokens, ctx=ctx,
+                        images=images, videos=videos, audios=audios,
+                    )
+                    return reg.run("after_llm", prompt=prompt, response=text,
+                                   model=self.alias.model_id, ctx=ctx)["response"]
 
-        # Extract the text content
-        text_parts: list[str] = []
-        for block in resp["output"]["message"]["content"]:
-            if "text" in block:
-                text_parts.append(block["text"])
-        result = "".join(text_parts)
+                content: list[dict[str, Any]] = [{"text": prompt}]
+                if images:
+                    for img in images:
+                        content.append({
+                            "image": {
+                                "format": _bedrock_image_format(img.get("mime_type", "")),
+                                "source": {"bytes": img["data"]},
+                            },
+                        })
+                if videos:
+                    for vid in videos:
+                        content.append({
+                            "video": {
+                                "format": _bedrock_video_format(vid.get("mime_type", "")),
+                                "source": {"bytes": vid["data"]},
+                            },
+                        })
+                # Bedrock Converse does not accept inline audio at v1; users
+                # who need audio should call Bedrock Audio APIs directly.
+                if audios and self.alias.provider == "bedrock":
+                    raise InvalidInputError(
+                        "Bedrock Converse does not accept inline audio input. "
+                        "Use a Vertex Gemini model for audio."
+                    )
+                messages = [{"role": "user", "content": content}]
+                kwargs: dict[str, Any] = {
+                    "modelId": self.alias.model_id,
+                    "messages": messages,
+                    "inferenceConfig": {"maxTokens": max_tokens},
+                }
+                if system:
+                    kwargs["system"] = [{"text": system}]
+                if self.guardrail_id:
+                    kwargs["guardrailConfig"] = {
+                        "guardrailIdentifier": self.guardrail_id,
+                        "guardrailVersion": self.guardrail_version or "DRAFT",
+                        "trace": "enabled",
+                    }
 
-        # Cost tracking — Q20
-        if ctx is not None and hasattr(ctx, "cost"):
-            usage = resp.get("usage", {})
-            ctx.cost.record_llm_call(
-                model=self.alias.model_id,
-                input_tokens=usage.get("inputTokens", 0),
-                output_tokens=usage.get("outputTokens", 0),
-                cached_tokens=usage.get("cacheReadInputTokens", 0),
-                reasoning_tokens=0,  # Bedrock doesn't expose reasoning tokens separately
-            )
+                # boto3 is sync; off-load to a thread so asyncio.gather can
+                # actually parallelize concurrent invokes across calls.
+                import asyncio
+                try:
+                    resp = await asyncio.to_thread(self._client.converse, **kwargs)
+                except Exception as e:
+                    raise self._translate_exception(e) from e
 
-        return result
+                stop_reason = resp.get("stopReason", "")
+                if stop_reason == "guardrail_intervened":
+                    from cloudless.exceptions import GuardrailBlocked
+                    from cloudless.runtime.audit import emit_audit
+                    trace = resp.get("trace", {}).get("guardrail", {})
+                    emit_audit(
+                        stage="after_llm",
+                        decision="block",
+                        policy_name=f"bedrock-guardrail/{self.guardrail_id}",
+                        reason="Bedrock Guardrail intervened",
+                        payload=prompt,
+                        extra={"guardrail_trace": trace},
+                    )
+                    raise GuardrailBlocked(
+                        f"Bedrock Guardrail {self.guardrail_id} blocked the response"
+                    )
+
+                text_parts: list[str] = []
+                for block in resp["output"]["message"]["content"]:
+                    if "text" in block:
+                        text_parts.append(block["text"])
+                result = "".join(text_parts)
+
+                if ctx is not None and hasattr(ctx, "cost"):
+                    usage = resp.get("usage", {})
+                    in_tok = usage.get("inputTokens", 0)
+                    out_tok = usage.get("outputTokens", 0)
+                    ctx.cost.record_llm_call(
+                        model=self.alias.model_id,
+                        input_tokens=in_tok,
+                        output_tokens=out_tok,
+                        cached_tokens=usage.get("cacheReadInputTokens", 0),
+                        reasoning_tokens=0,
+                    )
+                    tracing.set_attr("gen_ai.usage.input_tokens", in_tok)
+                    tracing.set_attr("gen_ai.usage.output_tokens", out_tok)
+
+                return reg.run("after_llm", prompt=prompt, response=result,
+                               model=self.alias.model_id, ctx=ctx)["response"]
+            except Exception as e:
+                tracing.record_exception(e)
+                raise
 
     # ------------------------------------------------------------------ #
     # Streaming
@@ -228,8 +365,20 @@ class LLM:
         system: Optional[str] = None,
         max_tokens: int = 512,
         ctx: Any = None,
+        images: Optional[list[dict]] = None,
     ) -> AsyncIterator[TextChunk]:
         """Streaming variant — yields cloudless TextChunks as tokens arrive."""
+        from cloudless.runtime.policy import get_registry
+        reg = get_registry()
+        prompt = reg.run("before_llm", prompt=prompt, model=self.alias.model_id, ctx=ctx)["prompt"]
+
+        if self._backend is not None:
+            async for chunk in self._backend.stream(
+                prompt, system=system, max_tokens=max_tokens, ctx=ctx, images=images,
+            ):
+                yield chunk
+            return
+
         if not self.alias.streaming_safe:
             # Warn but proceed — the form may have been approved for this account.
             # If it hasn't, Bedrock will raise ResourceNotFoundException with the
@@ -251,8 +400,9 @@ class LLM:
         if system:
             kwargs["system"] = [{"text": system}]
 
+        import asyncio
         try:
-            resp = self._client.converse_stream(**kwargs)
+            resp = await asyncio.to_thread(self._client.converse_stream, **kwargs)
         except Exception as e:
             raise self._translate_exception(e) from e
 
@@ -310,3 +460,39 @@ def list_models(provider: Optional[str] = None) -> Iterable[ModelAlias]:
     for a in DEFAULT_ALIASES:
         if provider is None or a.provider == provider:
             yield a
+
+
+def _bedrock_image_format(mime_type: str) -> str:
+    """Map an image MIME type to the Bedrock `converse` format string."""
+    mt = (mime_type or "").lower()
+    if "png" in mt:
+        return "png"
+    if "jpeg" in mt or "jpg" in mt:
+        return "jpeg"
+    if "gif" in mt:
+        return "gif"
+    if "webp" in mt:
+        return "webp"
+    return "jpeg"
+
+
+def _bedrock_video_format(mime_type: str) -> str:
+    """Map a video MIME type to the Bedrock `converse` video format string."""
+    mt = (mime_type or "").lower()
+    if "mp4" in mt:
+        return "mp4"
+    if "webm" in mt:
+        return "webm"
+    if "mov" in mt or "quicktime" in mt:
+        return "mov"
+    if "mkv" in mt or "matroska" in mt:
+        return "mkv"
+    if "flv" in mt:
+        return "flv"
+    if "wmv" in mt:
+        return "wmv"
+    if "mpeg" in mt or "mpg" in mt:
+        return "mpeg"
+    if "three_gpp" in mt or "3gpp" in mt:
+        return "three_gp"
+    return "mp4"  # safe default

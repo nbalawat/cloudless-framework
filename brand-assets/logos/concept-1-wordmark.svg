@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Concept 1 — Wordmark with spark dot.
+  The trademark is the period: a coral spark sits flush with the baseline.
+  Suggests "definitive statement" + python's dot notation + a flame on the horizon.
+  Reads at sizes from 16px favicon (use mark-only variant) to billboard.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" role="img" aria-label="cloudless">
+  <title>cloudless</title>
+  <style>
+    .word { font-family: 'Inter', system-ui, sans-serif; font-weight: 800; font-size: 80px; letter-spacing: -0.04em; }
+    .ink  { fill: #0F1B2D; }
+    .spark { fill: #FF5C39; }
+  </style>
+  <text x="20" y="90" class="word ink">cloudless</text>
+  <circle cx="410" cy="84" r="12" class="spark"/>
+</svg>

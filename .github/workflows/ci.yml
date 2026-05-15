@@ -1,0 +1,96 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,langgraph,strands,aws,gcp]"
+      - name: Lint
+        run: ruff check src tests
+      - name: Type-check
+        run: mypy src/cloudless --strict --ignore-missing-imports
+      - name: Unit tests
+        run: pytest tests/unit -q
+      - name: Build SBOM
+        run: python -m cloudless.cli.main security sbom -o sbom.json
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: sbom
+          path: sbom.json
+
+  integration-aws:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write   # OIDC to AWS
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: pip install -e ".[dev,aws,strands]"
+      - name: Cheap AWS integration tests
+        run: |
+          pytest tests/integration -m integration -q \
+            --deselect tests/integration/test_deploy_real_agentcore.py \
+            --deselect tests/integration/test_gcp_deploy_real.py \
+            --deselect tests/integration/test_memory_real_memory_bank.py \
+            -k "not gcp and not vertex"
+
+  integration-gcp:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write   # Workload Identity to GCP
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+      - run: pip install -e ".[dev,gcp,strands]"
+      - name: Cheap GCP integration tests
+        env:
+          CLOUDLESS_GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+        run: |
+          pytest tests/integration -m integration -q \
+            -k "gcp or vertex or gemini"
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          pip install -e ".[dev]"
+          pip install pip-audit
+      - name: Vulnerability audit
+        run: pip-audit --strict

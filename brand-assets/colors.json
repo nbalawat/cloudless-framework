@@ -1,0 +1,25 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "cloudless brand tokens",
+  "version": "0.1.0",
+  "color": {
+    "ink":      { "value": "#0F1B2D", "type": "color", "description": "Primary text + branded dark surfaces" },
+    "mist":     { "value": "#E8EEF5", "type": "color", "description": "Page background on light themes" },
+    "paper":    { "value": "#FFFFFF", "type": "color", "description": "Card / surface background" },
+    "slate":    { "value": "#475569", "type": "color", "description": "Body text" },
+    "spark":    { "value": "#FF5C39", "type": "color", "description": "Primary accent — CTAs, hover" },
+    "sky":      { "value": "#3B82F6", "type": "color", "description": "Secondary accent — info, links" },
+    "moss":     { "value": "#16A34A", "type": "color", "description": "Success / pass" },
+    "ember":    { "value": "#DC2626", "type": "color", "description": "Error / blocked" },
+    "amber":    { "value": "#F59E0B", "type": "color", "description": "Warning" },
+    "graphite": { "value": "#1F2937", "type": "color", "description": "Code block background" },
+    "fog":      { "value": "#94A3B8", "type": "color", "description": "Tertiary / muted text" }
+  },
+  "typography": {
+    "family": {
+      "display":  { "value": "'Inter', system-ui, -apple-system, sans-serif" },
+      "body":     { "value": "'Inter', system-ui, -apple-system, sans-serif" },
+      "mono":     { "value": "'JetBrains Mono', ui-monospace, 'SF Mono', monospace" }
+    }
+  }
+}

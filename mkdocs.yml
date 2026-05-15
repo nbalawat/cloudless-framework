@@ -1,0 +1,179 @@
+site_name: cloudless
+site_url: https://cloudless.dev
+site_description: Write your agent once. Ship it to any cloud. A Python framework for AWS Bedrock AgentCore and GCP Vertex AI Agent Engine.
+site_author: cloudless contributors
+copyright: Apache 2.0 · cloudless contributors
+
+repo_name: cloudless
+repo_url: https://github.com/cloudless/cloudless
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  logo: assets/logo-mark.svg
+  favicon: assets/favicon.svg
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: cloudless-light
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: cloudless-dark
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    annotation: material/plus-circle
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+
+extra_css:
+  - stylesheets/brand.css
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cloudless/cloudless
+      name: cloudless on GitHub
+  version:
+    provider: mike
+    default: stable
+  status:
+    new: Recently added
+    deprecated: Deprecated
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      base_path: [docs, .]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+    - getting-started/index.md
+    - Install: getting-started/install.md
+    - Quickstart: getting-started/quickstart.md
+    - Your first agent: getting-started/first-agent.md
+  - Concepts:
+    - concepts/index.md
+    - The agent class: concepts/agents.md
+    - Chunks: concepts/chunks.md
+    - Service catalog: concepts/service-catalog.md
+    - Multi-modal input: concepts/multimodal.md
+    - Identity & authentication: concepts/identity.md
+    - Cross-cloud A2A: concepts/cross-cloud-a2a.md
+    - Governance & audit: concepts/governance.md
+    - Grounding & retrieval: concepts/grounding.md
+    - HITL & long-running tasks: concepts/hitl.md
+    - Multi-agent patterns: concepts/patterns.md
+  - Guides:
+    - guides/index.md
+    - Deploy to AWS: guides/deploy-aws.md
+    - Deploy to GCP: guides/deploy-gcp.md
+    - Cassettes & eval: guides/cassettes-eval.md
+    - Cost telemetry: guides/cost-telemetry.md
+    - Resilience: guides/resilience.md
+  - Reference:
+    - reference/index.md
+    - CLI: reference/cli.md
+    - Python API: reference/python-api.md
+    - cloudless.yaml schema: reference/cloudless-yaml.md
+  - Internals:
+    - internals/index.md
+    - Architecture: ARCHITECTURE.md
+    - Decisions (ADRs): DECISIONS.md
+    - Roadmap: ROADMAP.md
+    - Risks: RISKS.md
+    - Spike findings: SPIKE-FINDINGS.md
+    - Certification: CERTIFICATION.md
+    - Research:
+      - research/README.md
+      - AgentCore runtime: research/01-agentcore-runtime.md
+      - AgentCore primitives: research/02-agentcore-primitives.md
+      - Frameworks & A2A: research/03-agentcore-frameworks-and-a2a.md
+      - AgentCore vs Vertex Agent Engine: research/04-agentcore-vs-vertex-agent-engine.md
+      - Gemini Enterprise rebrand: research/05-gemini-enterprise-rebrand.md
+      - AgentCore canonical architecture: research/06-agentcore-canonical-architecture.md
+      - Gemini Enterprise canonical architecture: research/07-gemini-enterprise-canonical-architecture.md
+      - Multi-agent patterns: research/08-multi-agent-patterns.md
+  - Brand: brand.md

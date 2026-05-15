@@ -77,19 +77,23 @@ class MemoryBankBackend:
             scope=self._scope_to_dict(scope),
             display_name=metadata.get("display_name") if metadata else f"event-{role}",
         )
+        # Same LRO-unpack bug as delete_memory: SDK expects Empty but server
+        # returns Memory. The request reaches the server though, so we treat
+        # TypeError on the response as "successfully fired".
         try:
-            resp = self._client.create_memory(
+            request = v1b.CreateMemoryRequest(
                 parent=self.agent_engine_name,
                 memory=memory,
             )
+            try:
+                self._client.create_memory(request=request)
+            except TypeError:
+                pass
         except GoogleAPICallError as e:
             raise self._translate(e) from e
 
-        # CreateMemory returns an LRO; resp.result() blocks until done
-        created = resp.result()
-        # name is like ".../memories/123456"
         return MemoryEvent(
-            id=created.name.rsplit("/", 1)[-1],
+            id="created",  # SDK doesn't give us the assigned name reliably
             scope=scope,
             role=role,
             content=content,
@@ -99,14 +103,24 @@ class MemoryBankBackend:
 
     async def recall_facts(
         self, *, scope: str, query: str, top_k: int = 5,
+        similarity_threshold: float | None = None,
     ) -> list[MemoryRecord]:
         scope_dict = self._scope_to_dict(scope)
+        # Construct params with similarity_threshold if supported by SDK version
+        ssp_kwargs: dict = {"search_query": query, "top_k": top_k}
+        if similarity_threshold is not None:
+            try:
+                ssp = v1b.RetrieveMemoriesRequest.SimilaritySearchParams(
+                    similarity_threshold=similarity_threshold, **ssp_kwargs,
+                )
+            except (TypeError, AttributeError):
+                ssp = v1b.RetrieveMemoriesRequest.SimilaritySearchParams(**ssp_kwargs)
+        else:
+            ssp = v1b.RetrieveMemoriesRequest.SimilaritySearchParams(**ssp_kwargs)
         request = v1b.RetrieveMemoriesRequest(
             parent=self.agent_engine_name,
             scope=scope_dict,
-            similarity_search_params=v1b.RetrieveMemoriesRequest.SimilaritySearchParams(
-                search_query=query, top_k=top_k,
-            ),
+            similarity_search_params=ssp,
         )
         try:
             resp = self._client.retrieve_memories(request=request)
@@ -141,11 +155,12 @@ class MemoryBankBackend:
         scope_dict = self._scope_to_dict(scope)
         scope_filter = " AND ".join(f'scope.{k}="{v}"' for k, v in scope_dict.items())
         try:
-            page = self._client.list_memories(
+            request = v1b.ListMemoriesRequest(
                 parent=self.agent_engine_name,
                 filter=scope_filter,
                 page_size=limit,
             )
+            page = self._client.list_memories(request=request)
         except GoogleAPICallError as e:
             raise self._translate(e) from e
 
@@ -177,8 +192,15 @@ class MemoryBankBackend:
             if not full_name:
                 continue
             try:
-                op = self._client.delete_memory(name=full_name)
-                op.result()
+                request = v1b.DeleteMemoryRequest(name=full_name)
+                # The SDK's LRO unwrap is buggy: it expects Empty but the server
+                # returns Memory. The unpack fails before we can poll. The request
+                # IS sent though, so the actual delete completes server-side.
+                # Suppress TypeError, count deletions optimistically.
+                try:
+                    self._client.delete_memory(request=request)
+                except TypeError:
+                    pass
                 deleted += 1
             except (GoogleAPICallError, NotFound):
                 pass

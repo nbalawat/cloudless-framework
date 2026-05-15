@@ -134,10 +134,14 @@ class VectorStore:
         embeddings=None,
         kb_id: Optional[str] = None,
         region: str = "us-east-1",
+        datastore_id: Optional[str] = None,
+        project: Optional[str] = None,
+        location: str = "global",
     ) -> None:
         if isinstance(backend, str):
             self._backend = self._build_backend(
                 backend, embeddings=embeddings, kb_id=kb_id, region=region,
+                datastore_id=datastore_id, project=project, location=location,
             )
         else:
             self._backend = backend
@@ -145,6 +149,9 @@ class VectorStore:
     @staticmethod
     def _build_backend(
         name: str, *, embeddings, kb_id: Optional[str], region: str,
+        datastore_id: Optional[str] = None,
+        project: Optional[str] = None,
+        location: str = "global",
     ) -> VectorStoreBackend:
         if name == "in_memory":
             if embeddings is None:
@@ -156,6 +163,13 @@ class VectorStore:
                 raise ValueError("backend='bedrock-kb' requires kb_id")
             from cloudless.adapters.aws.vector_store import BedrockKBBackend
             return BedrockKBBackend(kb_id=kb_id, region=region)
+        if name == "vertex-search":
+            if not datastore_id:
+                raise ValueError("backend='vertex-search' requires datastore_id")
+            from cloudless.adapters.gcp.vector_store import VertexSearchBackend
+            return VertexSearchBackend(
+                datastore_id=datastore_id, project=project, location=location,
+            )
         raise ValueError(f"Unknown VectorStore backend: {name!r}")
 
     async def upsert(self, docs: list[dict]) -> int:

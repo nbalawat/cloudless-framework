@@ -148,8 +148,19 @@ def rollback_command(
 def logs_command(
     *, agent_name: str, region: str = "us-east-1",
     since: str = "10m", follow: bool = False, endpoint: str = "DEFAULT",
+    trace_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    level: Optional[str] = None,
+    output: str = "text",
 ) -> int:
-    """`cloudless logs <agent> [--follow] [--since 1h]` — stream runtime logs."""
+    """`cloudless logs <agent> [--follow] [--since 1h] [--trace-id X] [--session-id Y] [--level WARN] [--json]`
+
+    Filters:
+      --trace-id  — match the structlog `trace.id` field
+      --session-id — match the `session.id` field
+      --level     — minimum level (DEBUG/INFO/WARNING/ERROR)
+      --output    — "text" (default) or "json"
+    """
     import boto3
     control = boto3.client("bedrock-agentcore-control", region_name=region)
     logs = boto3.client("logs", region_name=region)
@@ -160,14 +171,15 @@ def logs_command(
         return 1
     rid = rt["agentRuntimeId"]
 
-    # Per Spike 1 finding, the log group is named:
-    #   /aws/bedrock-agentcore/runtimes/<runtime-id>-<endpoint>
     log_group = f"/aws/bedrock-agentcore/runtimes/{rid}-{endpoint}"
-
     start_ts_ms = int((datetime.now(timezone.utc) - _parse_since(since)).timestamp() * 1000)
 
-    _console.print(f"[bold]cloudless logs[/]  {log_group}  since={since}  "
-                   f"follow={follow}")
+    if output == "text":
+        _console.print(f"[bold]cloudless logs[/]  {log_group}  since={since}  "
+                       f"follow={follow}"
+                       + (f"  trace={trace_id}" if trace_id else "")
+                       + (f"  session={session_id}" if session_id else "")
+                       + (f"  level≥{level}" if level else ""))
 
     while True:
         try:
@@ -186,14 +198,60 @@ def logs_command(
             return 2
 
         new_events = resp.get("events", [])
-        for e in new_events:
-            ts = datetime.fromtimestamp(e["timestamp"] / 1000, tz=timezone.utc)
-            print(f"{ts.isoformat()}  {e['message'].rstrip()}")
-            start_ts_ms = max(start_ts_ms, e["timestamp"] + 1)
+        for ev in new_events:
+            _emit_event(
+                ev,
+                trace_id=trace_id, session_id=session_id, level=level,
+                output=output,
+            )
+            start_ts_ms = max(start_ts_ms, ev["timestamp"] + 1)
 
         if not follow:
             return 0
         time.sleep(2)
+
+
+_LEVEL_RANK = {
+    "DEBUG": 10, "INFO": 20, "WARNING": 30, "WARN": 30,
+    "ERROR": 40, "CRITICAL": 50,
+}
+
+
+def _emit_event(ev: dict, *, trace_id: Optional[str], session_id: Optional[str],
+                level: Optional[str], output: str) -> None:
+    """Apply filters and print one log event."""
+    import json as _json
+    raw = ev["message"].rstrip()
+    parsed: Optional[dict] = None
+    try:
+        parsed = _json.loads(raw)
+    except (ValueError, TypeError):
+        parsed = None
+
+    if trace_id and (parsed is None or parsed.get("trace.id") != trace_id):
+        return
+    if session_id and (parsed is None or parsed.get("session.id") != session_id):
+        return
+    if level and parsed is not None:
+        ev_level = (parsed.get("level") or "").upper()
+        min_rank = _LEVEL_RANK.get(level.upper(), 0)
+        if _LEVEL_RANK.get(ev_level, 0) < min_rank:
+            return
+
+    if output == "json":
+        # If the raw line is already JSON, pass through; otherwise wrap.
+        if parsed is not None:
+            parsed.setdefault("__timestamp_ms", ev["timestamp"])
+            print(_json.dumps(parsed, separators=(",", ":")))
+        else:
+            print(_json.dumps({
+                "__timestamp_ms": ev["timestamp"],
+                "message": raw,
+            }, separators=(",", ":")))
+        return
+
+    ts = datetime.fromtimestamp(ev["timestamp"] / 1000, tz=timezone.utc)
+    print(f"{ts.isoformat()}  {raw}")
 
 
 def _parse_since(s: str) -> timedelta:

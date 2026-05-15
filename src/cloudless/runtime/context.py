@@ -68,6 +68,18 @@ class CostTracker(Protocol):
         """Bookkeeping for a single LLM invocation."""
         ...
 
+    def attribution_headers(self) -> dict[str, str]:
+        """HTTP headers a peer call should attach for cost attribution."""
+        ...
+
+    def ingest_attribution_headers(self, headers: dict[str, str]) -> None:
+        """Merge attribution from an inbound peer's headers."""
+        ...
+
+    def record_peer_call(self, *, peer: str, usd: float = 0.0) -> None:
+        """Record a peer call and (optionally) the peer's reported cost."""
+        ...
+
 
 class PeerClient(Protocol):
     """Per-peer-name client for A2A calls (Q12).
@@ -160,19 +172,32 @@ class _InMemoryUser:
 
 
 class _InMemoryCostTracker:
-    """No-op CostTracker for tests + `cloudless dev`.
+    """CostTracker for tests + `cloudless dev`.
 
-    Tracks attribution + LLM-call bookkeeping in-memory for inspection,
-    but always reports $0.0 for session_total_usd (no real pricing model
-    in dev mode; production wires to a pricing-aware OTel-backed impl).
+    Tracks attribution + LLM-call bookkeeping in-memory and computes
+    `session_total_usd` using the cloudless pricing table.
     """
 
     def __init__(self) -> None:
         self.attribution: dict[str, str] = {}
         self.llm_calls: list[dict[str, Any]] = []
+        self.peer_calls: list[dict[str, Any]] = []
+        # Costs reported as already-USD by peers (via A2A header)
+        self.imported_peer_usd: float = 0.0
 
     async def session_total_usd(self) -> float:
-        return 0.0
+        from cloudless.runtime.pricing import estimate_cost_usd
+        own = sum(
+            estimate_cost_usd(
+                call["model"],
+                input_tokens=call["input_tokens"],
+                output_tokens=call["output_tokens"],
+                cached_tokens=call.get("cached_tokens", 0),
+                reasoning_tokens=call.get("reasoning_tokens", 0),
+            )
+            for call in self.llm_calls
+        )
+        return own + self.imported_peer_usd
 
     def attribute(self, *, team: Optional[str] = None,
                   project: Optional[str] = None,
@@ -194,6 +219,53 @@ class _InMemoryCostTracker:
             "cached_tokens": cached_tokens,
             "reasoning_tokens": reasoning_tokens,
         })
+        from cloudless.runtime.cost_sinks import emit_cost
+        from cloudless.runtime.pricing import estimate_cost_usd
+        emit_cost(
+            kind="llm",
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cached_tokens=cached_tokens,
+            reasoning_tokens=reasoning_tokens,
+            usd=estimate_cost_usd(
+                model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cached_tokens=cached_tokens,
+                reasoning_tokens=reasoning_tokens,
+            ),
+            team=self.attribution.get("team"),
+            project=self.attribution.get("project"),
+            feature=self.attribution.get("feature"),
+        )
+
+    # ----------- A2A attribution propagation (Q20) ----------------- #
+
+    def attribution_headers(self) -> dict[str, str]:
+        """HTTP headers a peer should attach when calling another agent.
+
+        Receiving runtimes parse these into their own cost trackers via
+        `ingest_attribution_headers` so finance rollups stay consistent
+        across agent hops.
+        """
+        out: dict[str, str] = {}
+        for k, v in self.attribution.items():
+            out[f"X-Cloudless-Attribution-{k.capitalize()}"] = v
+        return out
+
+    def ingest_attribution_headers(self, headers: dict[str, str]) -> None:
+        """Merge attribution from an inbound peer's headers."""
+        for key, value in headers.items():
+            lk = key.lower()
+            if lk.startswith("x-cloudless-attribution-"):
+                tag = lk[len("x-cloudless-attribution-"):]
+                self.attribution.setdefault(tag, value)
+
+    def record_peer_call(self, *, peer: str, usd: float = 0.0) -> None:
+        """Record a peer call and (optionally) the peer's reported cost."""
+        self.peer_calls.append({"peer": peer, "usd": usd})
+        self.imported_peer_usd += usd
 
 
 class _InMemoryPeerClient:

@@ -275,6 +275,15 @@ class Memory:
             return MemoryBankBackend(
                 agent_engine_name=agent_engine_name, location=location,
             )
+        if name == "vertex_sessions":
+            if not agent_engine_name:
+                raise ValueError(
+                    "backend='vertex_sessions' requires agent_engine_name."
+                )
+            from cloudless.adapters.gcp.sessions import VertexSessionsBackend
+            return VertexSessionsBackend(
+                agent_engine_name=agent_engine_name, location=location,
+            )
         raise ValueError(f"Unknown memory backend: {name!r}")
 
     # ---- Verb-level API — delegates to backend ----
@@ -289,10 +298,105 @@ class Memory:
 
     async def recall_facts(
         self, *, scope: str, query: str, top_k: int = 5,
+        similarity_threshold: float | None = None,
     ) -> list[MemoryRecord]:
-        return await self._backend.recall_facts(
-            scope=scope, query=query, top_k=top_k,
+        # Pass similarity_threshold through if the backend supports it
+        import inspect
+        kw = {"scope": scope, "query": query, "top_k": top_k}
+        sig = inspect.signature(self._backend.recall_facts)
+        if "similarity_threshold" in sig.parameters and similarity_threshold is not None:
+            kw["similarity_threshold"] = similarity_threshold
+        return await self._backend.recall_facts(**kw)
+
+    async def recall_facts_cross_actor(
+        self, *, scopes: list[str], query: str, top_k: int = 5,
+    ) -> list[MemoryRecord]:
+        """Recall facts across multiple actor scopes (shared knowledge base).
+
+        Useful when a "team" memory or "company-wide" memory spans several
+        per-user scopes. Loops the recall call per scope and merges results
+        ranked by score where available.
+        """
+        all_results: list[MemoryRecord] = []
+        for scope in scopes:
+            try:
+                results = await self._backend.recall_facts(
+                    scope=scope, query=query, top_k=top_k,
+                )
+                all_results.extend(results)
+            except Exception:  # noqa: BLE001
+                continue
+        all_results.sort(
+            key=lambda r: (r.score if r.score is not None else 0.0),
+            reverse=True,
         )
+        return all_results[:top_k]
+
+    async def add_events_bulk(
+        self,
+        *,
+        scope: str,
+        events: list[dict],
+    ) -> list[MemoryEvent]:
+        """Add many events at once. Backends without a bulk API loop serially.
+
+        Each event dict requires `role` and `content`; optional `metadata`.
+        """
+        results: list[MemoryEvent] = []
+        for ev in events:
+            rec = await self._backend.add_event(
+                scope=scope,
+                role=ev["role"],
+                content=ev["content"],
+                metadata=ev.get("metadata"),
+            )
+            results.append(rec)
+        return results
+
+    async def export_facts(
+        self, *, scope: str, limit: int = 1000,
+    ) -> list[dict]:
+        """Export all events under `scope` as plain dicts for backup / migration.
+
+        Returns list of {id, scope, role, content, timestamp, metadata}.
+        """
+        events = await self._backend.list_events(scope=scope, limit=limit)
+        return [
+            {
+                "id": e.id,
+                "scope": e.scope,
+                "role": e.role,
+                "content": e.content,
+                "timestamp": (
+                    e.timestamp.isoformat() if hasattr(e.timestamp, "isoformat")
+                    else str(e.timestamp)
+                ),
+                "metadata": e.metadata,
+            }
+            for e in events
+        ]
+
+    async def import_facts(
+        self, *, records: list[dict], default_scope: str | None = None,
+    ) -> int:
+        """Bulk-import previously exported events. Returns the count imported.
+
+        Each record must include `role` and `content`; `scope` falls back to
+        `default_scope` if not present on the record.
+        """
+        n = 0
+        for r in records:
+            scope = r.get("scope") or default_scope
+            if not scope:
+                raise ValueError("record without scope and no default_scope")
+            await self._backend.add_event(
+                scope=scope,
+                role=r["role"],
+                content=r["content"],
+                metadata=r.get("metadata"),
+            )
+            n += 1
+        return n
 
     async def summarize_session(
         self, *, scope: str, session_id: str,

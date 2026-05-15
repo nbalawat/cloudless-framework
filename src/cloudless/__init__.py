@@ -18,6 +18,7 @@ from cloudless.chunks import (
     Chunk,
     ErrorChunk,
     FinalChunk,
+    PauseChunk,
     ReasoningChunk,
     StateChunk,
     TextChunk,
@@ -38,7 +39,17 @@ from cloudless.exceptions import (
     TimeoutError,
     TransientError,
 )
-from cloudless.runtime import Context, InMemoryContext
+from cloudless.runtime import (
+    Context,
+    InMemoryContext,
+    CircuitBreaker,
+    get_breaker,
+    get_policy_registry,
+    policy,
+    resilient,
+    with_retry,
+    with_timeout,
+)
 from cloudless.catalog import (
     LLM,
     InMemoryBackend,
@@ -86,11 +97,19 @@ __all__ = [
     "ToolResultChunk",
     "ReasoningChunk",
     "StateChunk",
+    "PauseChunk",
     "FinalChunk",
     "ErrorChunk",
     # Runtime
     "Context",
     "InMemoryContext",
+    "policy",
+    "get_policy_registry",
+    "resilient",
+    "with_retry",
+    "with_timeout",
+    "CircuitBreaker",
+    "get_breaker",
     # Framework adapters
     "LangGraphAgent",
     "StrandsAgent",

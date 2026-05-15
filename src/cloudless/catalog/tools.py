@@ -44,10 +44,19 @@ class Tool:
     metadata: dict = field(default_factory=dict)
 
     async def invoke(self, args: dict) -> Any:
-        result = self._invoker(args)
-        if inspect.iscoroutine(result):
-            return await result
-        return result
+        from cloudless.runtime.policy import get_registry
+        from cloudless.runtime import tracing
+        reg = get_registry()
+        args = reg.run("before_tool", tool_name=self.name, args=dict(args))["args"]
+        with tracing.span(f"tool.{self.name}", **{"tool.name": self.name}):
+            try:
+                result = self._invoker(args)
+                if inspect.iscoroutine(result):
+                    result = await result
+            except Exception as e:
+                tracing.record_exception(e)
+                raise
+        return reg.run("after_tool", tool_name=self.name, args=args, result=result)["result"]
 
     # ------------------------------------------------------------------ #
     # Factories (Q15 multi-source)

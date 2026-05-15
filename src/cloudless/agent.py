@@ -90,7 +90,7 @@ class Agent(ABC):
         # syntax requires SOMETHING in the function. `yield` makes mypy
         # recognize this as a generator function.
         if False:  # pragma: no cover
-            yield  # type: ignore[unreachable]
+            yield
         raise NotImplementedError
 
 

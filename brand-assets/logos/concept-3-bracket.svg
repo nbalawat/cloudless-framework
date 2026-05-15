@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Concept 3 — Bracket "C" mark + wordmark.
+  An open bracket forms a stylized "C" (for cloudless) that reads as both a
+  letterform and a deployment-arrow pointing right. The spark sits at the
+  outflow as a compact accent.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 140" role="img" aria-label="cloudless">
+  <title>cloudless</title>
+  <style>
+    .word { font-family: 'Inter', system-ui, sans-serif; font-weight: 800; font-size: 80px; letter-spacing: -0.04em; }
+    .ink  { fill: #0F1B2D; }
+    .spark { fill: #FF5C39; }
+  </style>
+  <!-- Open bracket forming a "C" -->
+  <path d="M114 26 L46 26 Q22 26 22 50 L22 90 Q22 114 46 114 L114 114"
+        fill="none" stroke="#0F1B2D" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Spark at the C's opening -->
+  <circle cx="112" cy="70" r="10" class="spark"/>
+  <!-- Wordmark -->
+  <text x="155" y="100" class="word ink">cloudless</text>
+  <circle cx="543" cy="94" r="10" class="spark"/>
+</svg>
