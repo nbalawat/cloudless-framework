@@ -70,53 +70,96 @@
   --md-typeset-mark-color:      rgba(255, 92, 57, 0.3);
 }
 
-/* Top-tabs nav — Material uses --md-primary-bg-color as text color. */
-[data-md-color-scheme="cloudless-dark"] .md-tabs__link {
-  color: #DCE5F0;
-  opacity: 1;
+/* Override-class selectors: `body[data-md-color-scheme]` matches with
+ * higher specificity than Material's stock `[data-md-color-scheme]`,
+ * and `!important` on the leaf colour wins even if Material's own
+ * palette.css redefines the rule later in the cascade. */
+
+/* Top-tabs nav (Home / Getting started / Concepts / Guides / ...) */
+body[data-md-color-scheme="cloudless-dark"] .md-tabs__link,
+body[data-md-color-scheme="cloudless-dark"] .md-tabs__link:link,
+body[data-md-color-scheme="cloudless-dark"] .md-tabs__link:visited {
+  color: #FFFFFF !important;
+  opacity: 0.9 !important;
 }
-[data-md-color-scheme="cloudless-dark"] .md-tabs__link:hover,
-[data-md-color-scheme="cloudless-dark"] .md-tabs__link--active {
-  color: #FFFFFF;
+body[data-md-color-scheme="cloudless-dark"] .md-tabs__link:hover,
+body[data-md-color-scheme="cloudless-dark"] .md-tabs__link--active {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
 }
 
 /* Header strip (logo + site title) — pure white on the dark bar. */
-[data-md-color-scheme="cloudless-dark"] .md-header__title,
-[data-md-color-scheme="cloudless-dark"] .md-header__topic {
-  color: #FFFFFF;
+body[data-md-color-scheme="cloudless-dark"] .md-header,
+body[data-md-color-scheme="cloudless-dark"] .md-header__title,
+body[data-md-color-scheme="cloudless-dark"] .md-header__topic,
+body[data-md-color-scheme="cloudless-dark"] .md-header__title .md-ellipsis {
+  color: #FFFFFF !important;
 }
 
-/* Left sidebar (Guides → Deploy to AWS / GCP / ...) — chrome was too dim. */
-[data-md-color-scheme="cloudless-dark"] .md-nav__link,
-[data-md-color-scheme="cloudless-dark"] .md-nav__title {
-  color: #DCE5F0;
+/* Left sidebar (Guides → Deploy to AWS / GCP / ...). */
+body[data-md-color-scheme="cloudless-dark"] .md-nav__link,
+body[data-md-color-scheme="cloudless-dark"] .md-nav__title,
+body[data-md-color-scheme="cloudless-dark"] .md-nav__link .md-ellipsis {
+  color: #E5ECF5 !important;
+  opacity: 1 !important;
 }
-[data-md-color-scheme="cloudless-dark"] .md-nav__link--active,
-[data-md-color-scheme="cloudless-dark"] .md-nav__link[aria-current="true"] {
-  color: #8FB8FF;
-  font-weight: 600;
-}
-
-/* Right "On this page" TOC — was nearly invisible. */
-[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link {
-  color: #B8C5D6;
-}
-[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link--active {
-  color: #FFFFFF;
+body[data-md-color-scheme="cloudless-dark"] .md-nav__link:hover,
+body[data-md-color-scheme="cloudless-dark"] .md-nav__link--active,
+body[data-md-color-scheme="cloudless-dark"] .md-nav__link--active .md-ellipsis,
+body[data-md-color-scheme="cloudless-dark"] .md-nav__link[aria-current="true"] {
+  color: #93C5FD !important;
 }
 
-/* Inline code in dark mode — bump contrast. */
-[data-md-color-scheme="cloudless-dark"] .md-typeset code {
-  background-color: #1a253e;
-  color: #F8FAFC;
+/* Right "On this page" TOC. */
+body[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link,
+body[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link .md-ellipsis {
+  color: #CBD5E1 !important;
+  opacity: 1 !important;
+}
+body[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link--active,
+body[data-md-color-scheme="cloudless-dark"] .md-nav--secondary .md-nav__link--active .md-ellipsis {
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
 }
 
-/* Breadcrumbs ("Home > Guides") were also washed out. */
-[data-md-color-scheme="cloudless-dark"] .md-path {
-  color: #B8C5D6;
+/* Body paragraphs / lists / list items — Material applies an opacity
+ * to .md-typeset that washes copy out on dark backgrounds. */
+body[data-md-color-scheme="cloudless-dark"] .md-typeset,
+body[data-md-color-scheme="cloudless-dark"] .md-typeset p,
+body[data-md-color-scheme="cloudless-dark"] .md-typeset li,
+body[data-md-color-scheme="cloudless-dark"] .md-content__inner {
+  color: #F4F7FB !important;
 }
-[data-md-color-scheme="cloudless-dark"] .md-path a:hover {
-  color: #FFFFFF;
+
+/* Inline code — bump contrast. */
+body[data-md-color-scheme="cloudless-dark"] .md-typeset code {
+  background-color: #1F2A44 !important;
+  color: #FFFFFF !important;
+}
+
+/* Code blocks / fenced blocks — Material's syntax-highlight base. */
+body[data-md-color-scheme="cloudless-dark"] .md-typeset pre > code,
+body[data-md-color-scheme="cloudless-dark"] .highlight code {
+  background-color: #131c2e !important;
+  color: #E5ECF5 !important;
+}
+
+/* Breadcrumbs ("Home > Guides"). */
+body[data-md-color-scheme="cloudless-dark"] .md-path,
+body[data-md-color-scheme="cloudless-dark"] .md-path__link {
+  color: #CBD5E1 !important;
+}
+body[data-md-color-scheme="cloudless-dark"] .md-path__link:hover {
+  color: #FFFFFF !important;
+}
+
+/* Search box and header buttons. */
+body[data-md-color-scheme="cloudless-dark"] .md-search__input {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF !important;
+}
+body[data-md-color-scheme="cloudless-dark"] .md-search__input::placeholder {
+  color: #B8C5D6 !important;
 }
 
 /* ---------- Typography ---------- */
